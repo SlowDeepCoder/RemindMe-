@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:remind_me/ui/models/note.dart';
+import 'package:remind_me/ui/screens/home_screen.dart';
+import 'package:remind_me/ui/screens/new_note_screen.dart';
 
-import 'Screens/HomeScreen.dart';
-import 'Screens/NewNoteScreen.dart';
-
-void main() {
+void main() async{
   runApp(const MyApp());
 }
 
@@ -19,8 +19,13 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
       ),
       initialRoute: "/",
-      routes: {HomeScreen.routeName: (context) => const HomeScreen(),
-        NewNoteScreen.routeName: (context) => const NewNoteScreen()},
+      routes: {
+        HomeScreen.routeName: (context) => const HomeScreen(),
+        NewNoteScreen.routeName: (context) => NewNoteScreen(
+            note: ModalRoute.of(context)!.settings.arguments != null
+                ? ModalRoute.of(context)!.settings.arguments as Note
+                : null)
+      },
     );
   }
 }
