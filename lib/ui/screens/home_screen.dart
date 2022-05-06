@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:remind_me/ui/models/note.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'new_note_screen.dart';
+import '../../flutter_local_notifications-9.4.1/lib/flutter_local_notifications.dart';
+import '../../services/notification_service.dart';
+import '../models/reminder.dart';
+import 'edit_note_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -20,8 +22,13 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _initNotifications();
-    _getNotes();
+    _init();
+  }
+
+  _init() async {
+    await _getNotes();
+    await _initNotifications();
+    _checkLatestNotification();
   }
 
   _getNotes() async {
@@ -32,24 +39,30 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   _initNotifications() async {
-    FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-        FlutterLocalNotificationsPlugin();
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
     const InitializationSettings initializationSettings =
         InitializationSettings(android: initializationSettingsAndroid);
-    await flutterLocalNotificationsPlugin.initialize(initializationSettings,
-        onSelectNotification: selectNotification);
-    var details =
-        await flutterLocalNotificationsPlugin.getNotificationAppLaunchDetails();
-    if (details != null && details.didNotificationLaunchApp) {
-      Navigator.of(context).pushNamed(NewNoteScreen.routeName);
+    await FlutterLocalNotificationsPlugin().initialize(initializationSettings,
+
+        onSelectNotification: _onSelectNotification);
+  }
+
+  _onSelectNotification(String? payload) async {
+    if (payload != null) {
+      for (Note note in notes) {
+        if (note.id == payload) {
+          _onNoteClicked(note);
+        }
+      }
     }
   }
 
-  void selectNotification(String? payload) async {
-    if (payload != null) {
-      Navigator.pushNamed(context, NewNoteScreen.routeName);
+  _checkLatestNotification() async {
+    var details = await FlutterLocalNotificationsPlugin()
+        .getNotificationAppLaunchDetails();
+    if (details != null && details.didNotificationLaunchApp) {
+      _onSelectNotification(details.payload);
     }
   }
 
@@ -91,30 +104,49 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   _onNoteClicked(Note note) async {
-    final result = await Navigator.pushNamed(context, NewNoteScreen.routeName,
-        arguments: note) as Map<String, String>?;
-    final title = result != null ? result["title"] : null;
-    final text = result != null ? result["text"] : null;
-    if (title != null && text != null) {
-      setState(() {
-        note.title = title;
-        note.text = text;
-      });
+    final editedNote = await Navigator.pushNamed(
+        context, EditNoteScreen.routeName,
+        arguments: note) as Note?;
+
+    if (editedNote != null) {
+      for (Note note in notes) {
+        if (note.id == editedNote.id) {
+          setState(() {
+            note = editedNote;
+          });
+        }
+      }
+      Note.saveNotes(notes);
     }
-    Note.saveNotes(notes);
+    // final title = result != null ? result["title"] : null;
+    // final text = result != null ? result["text"] : null;
+    // if (title != null && text != null) {
+    //   setState(() {
+    //     note.title = title;
+    //     note.text = text;
+    //   });
+    // }
   }
 
   _onFABClicked() async {
-    final result = await Navigator.pushNamed(context, NewNoteScreen.routeName)
-        as Map<String, String>?;
-    final title = result != null ? result["title"] : null;
-    final text = result != null ? result["text"] : null;
-    if (title != null && text != null) {
-      final note = Note.create(title, text);
+    final note =
+        await Navigator.pushNamed(context, EditNoteScreen.routeName) as Note?;
+
+    if (note != null) {
       setState(() {
         notes.add(note);
       });
+      Note.saveNotes(notes);
     }
-    Note.saveNotes(notes);
+    //   final title = result != null ? result["title"] : null;
+    //   final text = result != null ? result["text"] : null;
+    //   if (title != null && text != null) {
+    //     Reminder reminder = Reminder(_remindTimestamp, _reminderInterval, _recurringTimeUnit);
+    //     final note = Note.create(title, text, null);
+    //     setState(() {
+    //       notes.add(note);
+    //     });
+    //   }
+    //   Note.saveNotes(notes);
   }
 }
