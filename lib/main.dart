@@ -1,13 +1,11 @@
-import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:flutter/material.dart';
-import 'package:remind_me/services/notification_service.dart';
 import 'package:remind_me/ui/models/note.dart';
 import 'package:remind_me/ui/screens/home_screen.dart';
 import 'package:remind_me/ui/screens/edit_note_screen.dart';
 
 void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyApp());
-  NotificationService.triggerTestNotification();
 }
 
 class MyApp extends StatelessWidget {

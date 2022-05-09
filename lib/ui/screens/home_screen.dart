@@ -1,15 +1,12 @@
+import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:flutter/material.dart';
+import 'package:remind_me/ui/items/note_list_item.dart';
 import 'package:remind_me/ui/models/note.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
-import '../../flutter_local_notifications-9.4.1/lib/flutter_local_notifications.dart';
 import '../../services/notification_service.dart';
-import '../models/reminder.dart';
 import 'edit_note_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
-
   static const String routeName = "/";
 
   @override
@@ -17,7 +14,10 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final List<Note> notes = [];
+  List<Note> _notes = [];
+  final List<Note> _selectedNotes = [];
+  final List<NoteListItem> _noteItems = [];
+  final List<GlobalKey<NoteListItemState>> _noteItemKeys = [];
 
   @override
   void initState() {
@@ -26,81 +26,119 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   _init() async {
-    await _getNotes();
+    await _loadNotes();
     await _initNotifications();
-    _checkLatestNotification();
+    // _checkLatestNotification();
+    _updateListView();
   }
 
-  _getNotes() async {
+  _loadNotes() async {
     final notes = await Note.loadNotes();
-    setState(() {
-      this.notes.addAll(notes);
-    });
+    _notes.addAll(notes);
   }
 
   _initNotifications() async {
-    const AndroidInitializationSettings initializationSettingsAndroid =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
-    const InitializationSettings initializationSettings =
-        InitializationSettings(android: initializationSettingsAndroid);
-    await FlutterLocalNotificationsPlugin().initialize(initializationSettings,
-
-        onSelectNotification: _onSelectNotification);
-  }
-
-  _onSelectNotification(String? payload) async {
-    if (payload != null) {
-      for (Note note in notes) {
-        if (note.id == payload) {
-          _onNoteClicked(note);
-        }
-      }
-    }
-  }
-
-  _checkLatestNotification() async {
-    var details = await FlutterLocalNotificationsPlugin()
-        .getNotificationAppLaunchDetails();
-    if (details != null && details.didNotificationLaunchApp) {
-      _onSelectNotification(details.payload);
-    }
+    await NotificationService.initNotifications();
+    NotificationService.setNotificationListener(_notes, _onNoteClicked);
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("RemindMe!"),
-      ),
-      body: ListView.builder(
-          itemCount: notes.length,
-          itemBuilder: (context, index) {
-            return Card(
-                child: InkWell(
-                    onTap: () => _onNoteClicked(notes[index]),
-                    child: SizedBox(
-                      height: 100,
-                      child: Column(children: <Widget>[
-                        Text(
-                          notes[index].title,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                              fontSize: 20, fontWeight: FontWeight.bold),
-                        ),
-                        SizedBox(
-                            width: double.infinity,
-                            child: Text(
-                              notes[index].text,
-                              textAlign: TextAlign.start,
-                            ))
-                      ]),
-                    )));
-          }),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _onFABClicked(),
-        child: const Icon(Icons.add),
-      ),
+    return WillPopScope(
+        onWillPop: _onBackPressed,
+        child: Scaffold(
+          appBar: _getAppBar(),
+          floatingActionButton: FloatingActionButton(
+            onPressed: () => _addNewNote(),
+            child: const Icon(Icons.add),
+          ),
+          floatingActionButtonLocation:
+              FloatingActionButtonLocation.centerDocked,
+          bottomNavigationBar: BottomAppBar(
+            shape: CircularNotchedRectangle(),
+            notchMargin: 5,
+            child: Row(
+              mainAxisSize: MainAxisSize.max,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: <Widget>[
+                IconButton(
+                  icon: Icon(
+                    Icons.menu,
+                    color: Colors.blue,
+                  ),
+                  onPressed: () {},
+                ),
+                IconButton(
+                  icon: Icon(
+                    Icons.search,
+                    color: Colors.blue,
+                  ),
+                  onPressed: () {},
+                ),
+                IconButton(
+                  icon: Icon(
+                    Icons.print,
+                    color: Colors.blue,
+                  ),
+                  onPressed: () {},
+                ),
+                IconButton(
+                  icon: Icon(
+                    Icons.people,
+                    color: Colors.blue,
+                  ),
+                  onPressed: () {},
+                ),
+              ],
+            ),
+          ),
+          body: Stack(children: [
+            Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.arrow_drop_down), Text("Sort by: created")]),
+            Container(
+               margin: EdgeInsets.only(top:25), child:
+            ListView.builder(
+                itemCount: _noteItems.length,
+                itemBuilder: (context, index) {
+                  return _noteItems[index];
+                }))
+          ]),
+        ));
+  }
+
+  _getAppBar() {
+    return AppBar(
+      title: Text(_selectedNotes.isEmpty
+          ? "RemindMe!"
+          : _selectedNotes.length.toString()),
+      actions: _selectedNotes.isEmpty
+          ? null
+          : <Widget>[
+              IconButton(
+                  onPressed: () => _clearSelectedNotes(),
+                  icon: Icon(Icons.highlight_remove)),
+              IconButton(
+                  onPressed: () => _deleteSelectedNotes(),
+                  icon: Icon(Icons.delete))
+            ],
     );
+  }
+
+  _deleteSelectedNotes() {
+    for (Note selectedNote in _selectedNotes) {
+      _notes.remove(selectedNote);
+    }
+    _selectedNotes.clear();
+    _updateListView();
+    Note.saveNotes(_notes);
+  }
+
+  _clearSelectedNotes() {
+    for (int i = 0; i < _noteItemKeys.length; i++) {
+      _noteItemKeys[i].currentState?.unselectItem();
+    }
+    setState(() {
+      _selectedNotes.clear();
+    });
   }
 
   _onNoteClicked(Note note) async {
@@ -109,44 +147,65 @@ class _HomeScreenState extends State<HomeScreen> {
         arguments: note) as Note?;
 
     if (editedNote != null) {
-      for (Note note in notes) {
+      for (Note note in _notes) {
         if (note.id == editedNote.id) {
-          setState(() {
-            note = editedNote;
-          });
+          note = editedNote;
         }
       }
-      Note.saveNotes(notes);
+      _notes = Note.sortNotes(_notes, SortOptions.updated, true);
+      Note.saveNotes(_notes);
+      _updateListView();
     }
-    // final title = result != null ? result["title"] : null;
-    // final text = result != null ? result["text"] : null;
-    // if (title != null && text != null) {
-    //   setState(() {
-    //     note.title = title;
-    //     note.text = text;
-    //   });
-    // }
   }
 
-  _onFABClicked() async {
+  _addNewNote() async {
+    _clearSelectedNotes();
     final note =
         await Navigator.pushNamed(context, EditNoteScreen.routeName) as Note?;
 
     if (note != null) {
-      setState(() {
-        notes.add(note);
-      });
-      Note.saveNotes(notes);
+      _notes.add(note);
+      _notes = Note.sortNotes(_notes, SortOptions.updated, true);
+      Note.saveNotes(_notes);
+      _updateListView();
     }
-    //   final title = result != null ? result["title"] : null;
-    //   final text = result != null ? result["text"] : null;
-    //   if (title != null && text != null) {
-    //     Reminder reminder = Reminder(_remindTimestamp, _reminderInterval, _recurringTimeUnit);
-    //     final note = Note.create(title, text, null);
-    //     setState(() {
-    //       notes.add(note);
-    //     });
-    //   }
-    //   Note.saveNotes(notes);
+  }
+
+  void _updateListView() {
+    _noteItemKeys.clear();
+    _noteItems.clear();
+    for (int i = 0; i < _notes.length; i++) {
+      _noteItemKeys.add(GlobalKey<NoteListItemState>());
+      _noteItems.add(NoteListItem(
+        _notes[i],
+        (bool value) {
+          setState(() {
+            if (value) {
+              _selectedNotes.add(_notes[i]);
+            } else {
+              _selectedNotes.remove(_notes[i]);
+            }
+          });
+        },
+        () => _selectedNotes.isEmpty
+            ? _onNoteClicked(_notes[i])
+            : _onNoteSelected(i),
+        _noteItemKeys[i],
+      ));
+    }
+    setState(() {});
+  }
+
+  _onNoteSelected(int i) {
+    _noteItemKeys[i].currentState?.selectItem();
+  }
+
+  Future<bool> _onBackPressed() async {
+    if (_selectedNotes.isEmpty) {
+      return true;
+    } else {
+      _clearSelectedNotes();
+      return false;
+    }
   }
 }

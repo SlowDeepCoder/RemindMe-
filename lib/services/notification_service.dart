@@ -1,58 +1,90 @@
+import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:timezone/data/latest_all.dart' as tz;
-import 'package:timezone/timezone.dart' as tz;
-import 'package:remind_me/flutter_local_notifications-9.4.1/lib/flutter_local_notifications.dart';
+import 'package:flutter/material.dart';
 import '../ui/models/note.dart';
 
 class NotificationService {
   static const String title = "New activity";
 
+  static initNotifications() async {
+    await AwesomeNotifications().initialize(
+        // set the icon to null if you want to use the default app icon
+        null,
+        [
+          NotificationChannel(
+              channelGroupKey: 'basic_channel_group',
+              channelKey: 'basic_channel',
+              channelName: 'Basic notifications',
+              channelDescription: 'Notification channel for basic tests',
+              defaultColor: Color(0xFF9D50DD),
+              ledColor: Colors.white)
+        ],
+        // Channel groups are only visual and are not required
+        channelGroups: [
+          NotificationChannelGroup(
+              channelGroupkey: 'basic_channel_group',
+              channelGroupName: 'Basic group')
+        ],
+        debug: true);
+    await AwesomeNotifications().isNotificationAllowed().then((isAllowed) {
+      if (!isAllowed) {
+        AwesomeNotifications().requestPermissionToSendNotifications();
+      }
+    });
+  }
+
+  static setNotificationListener(List<Note> notes, Function(Note) onClick) {
+    AwesomeNotifications()
+        .actionStream
+        .listen((ReceivedNotification receivedNotification) {
+      if (receivedNotification.payload != null) {
+        if (receivedNotification.payload!.containsKey("id")) {
+          for (Note note in notes) {
+            if (note.id == receivedNotification.payload!["id"]) {
+              onClick(note);
+              break;
+            }
+          }
+        }
+      }
+    });
+  }
+
   static setNotification(Note note) async {
     if (note.reminder.timestamp == null) {
-      FlutterLocalNotificationsPlugin().cancel(note.reminder.id);
+      AwesomeNotifications().cancel(note.reminder.id);
     } else {
-      tz.initializeTimeZones();
-      tz.TZDateTime scheduledDateTime =
-          tz.TZDateTime.fromMillisecondsSinceEpoch(
-              tz.local, note.reminder.timestamp!);
-      const AndroidNotificationDetails androidPlatformChannelSpecifics =
-          AndroidNotificationDetails(
-        'reminders',
-        'Reminders',
-        channelDescription: 'Get reminders from your notes',
-        importance: Importance.max,
-        priority: Priority.high,
+      final date =
+          DateTime.fromMillisecondsSinceEpoch(note.reminder.timestamp!);
+      final cron = CronHelper().hourly(referenceDateTime: date);
+      AwesomeNotifications().createNotification(
+        schedule: NotificationAndroidCrontab(crontabExpression: cron),
+        content: NotificationContent(
+            id: note.reminder.id,
+            channelKey: 'basic_channel',
+            title: title,
+            body: 'Simple body',
+            payload: {"id": note.id}),
       );
-      const NotificationDetails platformChannelSpecifics =
-          NotificationDetails(android: androidPlatformChannelSpecifics);
-      // await FlutterLocalNotificationsPlugin().zonedSchedule(note.reminder.id,
-      //     title, note.title, scheduledDateTime, platformChannelSpecifics,
-      //     androidAllowWhileIdle: true,
-      //     uiLocalNotificationDateInterpretation:
-      //         UILocalNotificationDateInterpretation.absoluteTime,
-      //     payload: note.id);
-      debugPrint(scheduledDateTime.millisecondsSinceEpoch.toString());
-      await FlutterLocalNotificationsPlugin().periodicallyShow(note.reminder.id, title,
-          note.title, RepeatInterval.everyMinute, 1, scheduledDateTime.millisecondsSinceEpoch, platformChannelSpecifics,
-          androidAllowWhileIdle: true, payload: note.id);
     }
   }
 
-  static triggerTestNotification() {
-      const AndroidNotificationDetails androidPlatformChannelSpecifics =
-      AndroidNotificationDetails(
-        'reminders',
-        'Reminders',
-        channelDescription: 'Get reminders from your notes',
-        importance: Importance.max,
-        priority: Priority.high,
-      );
-      const NotificationDetails platformChannelSpecifics =
-      NotificationDetails(android: androidPlatformChannelSpecifics);
-      DateTime date =  DateTime.now().add(const Duration(minutes: 5));
-      debugPrint(date.millisecondsSinceEpoch.toString());
-    FlutterLocalNotificationsPlugin().periodicallyShow(0, "Test",
-        "Test message", RepeatInterval.everyMinute, 1, date.millisecondsSinceEpoch, platformChannelSpecifics,
-        androidAllowWhileIdle: true);
+  static cancelAllNotifications() {
+    AwesomeNotifications().cancelAll();
+  }
+
+  static cancelNotification(Note note) {
+    AwesomeNotifications().cancel(note.reminder.id);
+  }
+
+  static triggerTestNotification(Note note) {
+    AwesomeNotifications().createNotification(
+      content: NotificationContent(
+          id: note.reminder.id,
+          channelKey: 'basic_channel',
+          title: title,
+          body: 'Simple body',
+          payload: {"id": note.id}),
+    );
   }
 }
