@@ -15,6 +15,16 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      builder: (context, child) {
+        if (child != null) {
+          return MediaQuery(
+              data:
+                  MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
+              child: child);
+        } else {
+          return Container();
+        }
+      },
       title: 'Flutter Demo',
       theme: ThemeData(
         primarySwatch: Colors.blue,
@@ -23,9 +33,7 @@ class MyApp extends StatelessWidget {
       routes: {
         HomeScreen.routeName: (context) => const HomeScreen(),
         EditNoteScreen.routeName: (context) => EditNoteScreen(
-            note: ModalRoute.of(context)!.settings.arguments != null
-                ? ModalRoute.of(context)!.settings.arguments as Note
-                : null)
+            note: ModalRoute.of(context)!.settings.arguments as Note?)
       },
     );
   }

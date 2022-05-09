@@ -37,6 +37,9 @@ dependencies:
   shared_preferences: ^2.0.13
   awesome_notifications: ^0.6.21
   modal_bottom_sheet: ^2.0.1
+  weekday_selector: ^1.1.0
+  collection: ^1.15.0
+  intl: ^0.17.0
 
 dev_dependencies:
   flutter_test:

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
 import 'package:remind_me/services/date_service.dart';
 import 'package:remind_me/services/notification_service.dart';
+import 'package:weekday_selector/weekday_selector.dart';
 import '../models/note.dart';
 import '../models/reminder.dart';
 
@@ -19,23 +21,21 @@ class EditNoteScreen extends StatefulWidget {
 class _EditNoteScreenState extends State<EditNoteScreen> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _textController = TextEditingController();
-  late final _isNewNote;
-  String _reminderTime = "";
-  int? _reminderTimeStamp;
+  final List<Reminder> _removedReminders = [];
+  final List<Reminder> _newReminders = [];
+  late final bool _isNewNote;
+  late final Note note;
 
   @override
   void initState() {
     super.initState();
     _isNewNote = widget.note == null;
     if (widget.note != null) {
-      _titleController.text = widget.note!.title;
-      _textController.text = widget.note!.text;
-      _reminderTimeStamp = widget.note!.reminder.timestamp;
-      if (_reminderTimeStamp != null) {
-        DateTime dateTime =
-            DateTime.fromMillisecondsSinceEpoch(_reminderTimeStamp!);
-        _reminderTime = dateTime.toString();
-      }
+      note = Note.copy(widget.note!);
+      _titleController.text = note.title;
+      _textController.text = note.text;
+    } else {
+      note = Note.create();
     }
   }
 
@@ -44,15 +44,14 @@ class _EditNoteScreenState extends State<EditNoteScreen> {
     super.dispose();
     _titleController.dispose();
     _textController.dispose();
+    // print(note.isEqual(widget.note));
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isNewNote
-            ? "New note"
-            : "Edit note #" + (widget.note?.id.toString() ?? "")),
+        title: Text(_isNewNote ? "New note" : "Edit note #" + (note.id)),
         actions: <Widget>[
           IconButton(
               onPressed: () => _onCheckPressed(), icon: const Icon(Icons.check))
@@ -83,56 +82,98 @@ class _EditNoteScreenState extends State<EditNoteScreen> {
               ),
             ),
           ),
+          Expanded(
+              child: ListView.builder(
+                  itemCount: note.reminders.length,
+                  itemBuilder: (context, index) {
+                    final reminder = note.reminders[index];
+                    final date = DateTime.fromMillisecondsSinceEpoch(
+                        reminder.timestamp!);
+                    final dateString =
+                        DateFormat('hh:mm dd MMM yyyy').format(date);
+                    return Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: SizedBox(
+                          height: 50,
+                          child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: <Widget>[
+                                Expanded(
+                                    child: InkWell(
+                                        onTap: () => {},
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: <Widget>[
+                                            const Text(
+                                              "Reminder",
+                                            ),
+                                            Text(dateString)
+                                          ],
+                                        ))),
+                                IconButton(
+                                    onPressed: () {
+                                      setState(() {
+                                        note.reminders.remove(reminder);
+                                        _removedReminders.add(reminder);
+                                      });
+                                    },
+                                    color: Colors.red,
+                                    icon: const Icon(Icons.delete))
+                              ]),
+                        ));
+                  })),
+          // Padding(
+          //     padding: EdgeInsets.all(10),
+          //     child: ElevatedButton(
+          //       onPressed: () => {
+          //         if (!_isNewNote)
+          //           NotificationService.triggerTestNotification(widget.note!)
+          //       },
+          //       child: Text("Trigger Notification"),
+          //       style:
+          //           ElevatedButton.styleFrom(minimumSize: Size.fromHeight(40)),
+          //     )),
           Padding(
-              padding: const EdgeInsets.all(8),
-              child: SizedBox(
-                height: 50,
-                child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: <Widget>[
-                      Expanded(
-                          child: InkWell(
-                              onTap: _setReminderTime,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: <Widget>[
-                                  const Text(
-                                    "Reminder",
-                                  ),
-                                  Text(_reminderTime)
-                                ],
-                              ))),
-                      IconButton(
-                          onPressed: _removeReminderTime,
-                          color: Colors.red,
-                          icon: const Icon(Icons.delete))
-                    ]),
-              )),
-          Padding(
-              padding: EdgeInsets.all(10),
-              child: ElevatedButton(
-                onPressed: () => {
-                  if (!_isNewNote)
-                    NotificationService.triggerTestNotification(widget.note!)
-                },
-                child: Text("Trigger Notification"),
-                style:
-                    ElevatedButton.styleFrom(minimumSize: Size.fromHeight(40)),
-              )),
-          Padding(
-              padding: EdgeInsets.all(10),
+              padding: const EdgeInsets.all(10),
               child: ElevatedButton(
                 onPressed: _addNewReminder,
-                child: Text("Add notification"),
-                style:
-                    ElevatedButton.styleFrom(minimumSize: Size.fromHeight(40)),
-              ))
+                child: const Text("Add reminder"),
+                style: ElevatedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(40)),
+              )),
         ],
       ),
     );
   }
 
-  _setReminderTime() async {
+  _addNewReminder() {
+    showMaterialModalBottomSheet(
+      context: context,
+      builder: (_) => Container(
+          padding: const EdgeInsets.all(8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              InkWell(
+                  onTap: _addSingleReminder,
+                  child: const SizedBox(
+                    height: 50,
+                    child: Center(child: Text('Add single reminder')),
+                  )),
+              InkWell(
+                  onTap: _addRecurringReminder,
+                  child: const SizedBox(
+                    height: 50,
+                    child: Center(child: Text('Add reccuring reminder')),
+                  )),
+            ],
+          )),
+    );
+  }
+
+  _addSingleReminder() async {
+    Navigator.of(context).pop();
     DateTime now = DateTime.now();
     DateTime inAYear = DateTime(now.year + 1, now.month, now.day);
     DateTime? pickedDate = await showDatePicker(
@@ -150,66 +191,72 @@ class _EditNoteScreenState extends State<EditNoteScreen> {
       if (pickedTime != null) {
         DateTime pickedDateTime = DateTime(pickedDate.year, pickedDate.month,
             pickedDate.day, pickedTime.hour, pickedTime.minute);
+        final reminder = Reminder.create(false, note.id,
+            timestamp: pickedDateTime.millisecondsSinceEpoch);
         setState(() {
-          _reminderTimeStamp = pickedDateTime.millisecondsSinceEpoch;
-          _reminderTime = pickedDateTime.toString();
+          note.addReminder(reminder);
+          _newReminders.add(reminder);
         });
       }
     }
   }
 
-  _removeReminderTime() {
-    setState(() {
-      _reminderTimeStamp = null;
-      _reminderTime = "";
-    });
-  }
+  _addRecurringReminder() async {
+    Navigator.of(context).pop();
+    final days = List.filled(7, false);
+    final hasChosenDays = await showMaterialModalBottomSheet(
+        context: context,
+        builder: (_) => StatefulBuilder(
+            builder: (_, setState) => Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                          padding: EdgeInsets.only(top: 10),
+                          child: WeekdaySelector(
+                            onChanged: (int day) {
+                              setState(() {
+                                final index = day % 7;
+                                days[index] = !days[index];
+                              });
+                            },
+                            values: days,
+                          )),
+                      Container(
+                          padding: EdgeInsets.all(10),
+                          child: ElevatedButton(
+                              onPressed: () {
+                                for (bool day in days) {
+                                  if (day) {
+                                    Navigator.of(context).pop(true);
+                                    return;
+                                  }
+                                }
+                                Navigator.of(context).pop(false);
+                              },
+                              child: Text("Ok")))
+                    ])));
 
-  _addNewReminder() {
-    showMaterialModalBottomSheet(
-      context: context,
-      builder: (context) => Container(
-          padding: const EdgeInsets.all(8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Container(
-                height: 50,
-                color: Colors.amber[600],
-                child: const Center(child: Text('Entry A')),
-              ),
-              Container(
-                height: 50,
-                color: Colors.amber[500],
-                child: const Center(child: Text('Entry B')),
-              ),
-              Container(
-                height: 50,
-                color: Colors.amber[100],
-                child: const Center(child: Text('Entry C')),
-              ),
-            ],
-          )),
-    );
+    if (hasChosenDays != null && hasChosenDays) {
+      TimeOfDay initialTime = TimeOfDay.now();
+      TimeOfDay? pickedTime = await showTimePicker(
+        context: context,
+        initialTime: initialTime,
+      );
+    }
   }
 
   _onCheckPressed() async {
-    Reminder reminder;
-    Note note;
-    if (_isNewNote) {
-      reminder = Reminder(_reminderTimeStamp, 0, TimeUnits.minute);
-      note = Note.create(_titleController.text, _textController.text, reminder);
-    } else {
-      note = widget.note!;
-      note.title = _titleController.text;
-      note.text = _textController.text;
-      note.reminder.timestamp = _reminderTimeStamp;
-      note.updatedAt = DateService.getCurrentTimestamp();
-    }
+    note.title = _titleController.text;
+    note.text = _textController.text;
+    note.updatedAt = DateService.getCurrentTimestamp();
+
     if (note.title == "") {
       note.title = "Untitled";
     }
-    await NotificationService.setNotification(note);
+
+    NotificationService.cancelReminders(_removedReminders);
+    NotificationService.setReminders(_newReminders);
     Navigator.pop(context, note);
   }
 }

@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:remind_me/ui/items/note_list_item.dart';
 import 'package:remind_me/ui/models/note.dart';
 import '../../services/notification_service.dart';
+import '../pages/notes_page.dart';
+import '../pages/reminders_page.dart';
 import 'edit_note_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -14,10 +16,41 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  List<Note> _notes = [];
-  final List<Note> _selectedNotes = [];
-  final List<NoteListItem> _noteItems = [];
-  final List<GlobalKey<NoteListItemState>> _noteItemKeys = [];
+  final List<Note> _notes = [];
+  final _notesPageKey = GlobalKey<NotesPageState>();
+  final _remindersPageKey = GlobalKey<RemindersPageState>();
+  int pageIndex = 0;
+  final pageController = PageController(
+    initialPage: 0,
+    keepPage: true,
+  );
+
+  Widget buildPageView() {
+    return PageView(
+      controller: pageController,
+      onPageChanged: (index) {
+        setState(() {
+          pageIndex = index;
+        });
+      },
+      children: <Widget>[
+        NotesPage(
+          onSelectionChange: () {
+            setState(() {});
+          },
+          notes: _notes,
+          key: _notesPageKey, onNotesChange: (List<Note> notes) {
+            setState(() {
+              _notes.clear();
+              _notes.addAll(notes);
+            });
+            Note.saveNotes(_notes);
+        },
+        ),
+        RemindersPage(key: _remindersPageKey),
+      ],
+    );
+  }
 
   @override
   void initState() {
@@ -27,19 +60,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   _init() async {
     await _loadNotes();
-    await _initNotifications();
-    // _checkLatestNotification();
-    _updateListView();
   }
 
   _loadNotes() async {
     final notes = await Note.loadNotes();
     _notes.addAll(notes);
-  }
-
-  _initNotifications() async {
-    await NotificationService.initNotifications();
-    NotificationService.setNotificationListener(_notes, _onNoteClicked);
   }
 
   @override
@@ -54,157 +79,114 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           floatingActionButtonLocation:
               FloatingActionButtonLocation.centerDocked,
-          bottomNavigationBar: BottomAppBar(
-            shape: CircularNotchedRectangle(),
-            notchMargin: 5,
-            child: Row(
-              mainAxisSize: MainAxisSize.max,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: <Widget>[
-                IconButton(
-                  icon: Icon(
-                    Icons.menu,
-                    color: Colors.blue,
-                  ),
-                  onPressed: () {},
-                ),
-                IconButton(
-                  icon: Icon(
-                    Icons.search,
-                    color: Colors.blue,
-                  ),
-                  onPressed: () {},
-                ),
-                IconButton(
-                  icon: Icon(
-                    Icons.print,
-                    color: Colors.blue,
-                  ),
-                  onPressed: () {},
-                ),
-                IconButton(
-                  icon: Icon(
-                    Icons.people,
-                    color: Colors.blue,
-                  ),
-                  onPressed: () {},
-                ),
-              ],
-            ),
+          bottomNavigationBar: BottomNavigationBar(
+            currentIndex: pageIndex,
+            onTap: (index) {
+              setState(() {
+                pageIndex = index;
+                pageController.animateToPage(index,
+                    duration: const Duration(milliseconds: 500),
+                    curve: Curves.ease);
+              });
+            },
+            items: const [
+              BottomNavigationBarItem(icon: Icon(Icons.notes), label: 'Notes'),
+              BottomNavigationBarItem(
+                  icon: Icon(Icons.alarm), label: 'Reminders'),
+            ],
           ),
-          body: Stack(children: [
-            Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.arrow_drop_down), Text("Sort by: created")]),
-            Container(
-               margin: EdgeInsets.only(top:25), child:
-            ListView.builder(
-                itemCount: _noteItems.length,
-                itemBuilder: (context, index) {
-                  return _noteItems[index];
-                }))
-          ]),
+
+          // BottomAppBar(
+          //   shape: CircularNotchedRectangle(),
+          //   notchMargin: 5,
+          //   child: Row(
+          //     mainAxisSize: MainAxisSize.max,
+          //     mainAxisAlignment: MainAxisAlignment.spaceAround,
+          //     children: <Widget>[
+          //
+          //       IconButton(
+          //         icon: const Icon(
+          //           Icons.notes,
+          //           color: Colors.blue,
+          //         ),
+          //         onPressed: () {},
+          //       ),
+          //       IconButton(
+          //         icon: const Icon(
+          //           Icons.alarm,
+          //           color: Colors.blue,
+          //         ),
+          //         onPressed: () {},
+          //       ),
+          //     ],
+          //   ),
+          // ),
+          body: buildPageView(),
         ));
   }
 
   _getAppBar() {
     return AppBar(
-      title: Text(_selectedNotes.isEmpty
-          ? "RemindMe!"
-          : _selectedNotes.length.toString()),
-      actions: _selectedNotes.isEmpty
+      title: const Text("RemindMe!"),
+      actions: _notesPageKey.currentState == null
           ? null
-          : <Widget>[
-              IconButton(
-                  onPressed: () => _clearSelectedNotes(),
-                  icon: Icon(Icons.highlight_remove)),
-              IconButton(
-                  onPressed: () => _deleteSelectedNotes(),
-                  icon: Icon(Icons.delete))
-            ],
+          : _notesPageKey.currentState!.selectedNotes.isEmpty
+              ? [
+                  PopupMenuButton(
+                      // add icon, by default "3 dot" icon
+                      // icon: Icon(Icons.book)
+                      itemBuilder: (context) {
+                    return [
+                      const PopupMenuItem<int>(
+                        value: 0,
+                        child: Text("Sort by: Created"),
+                      ),
+                      const PopupMenuItem<int>(
+                        value: 1,
+                        child: Text("Sort by: Edited"),
+                      ),
+                    ];
+                  }, onSelected: (value) {
+                    if (value == 0) {
+                      _notesPageKey.currentState
+                          ?.sortNotes(SortOptions.created);
+                    } else if (value == 1) {
+                      _notesPageKey.currentState
+                          ?.sortNotes(SortOptions.updated);
+                    }
+                  }),
+                ]
+              : [
+                  IconButton(
+                      onPressed: () =>
+                          _notesPageKey.currentState?.clearSelectedNotes(),
+                      icon: Icon(Icons.highlight_remove)),
+                  IconButton(
+                      onPressed: () =>
+                          _notesPageKey.currentState?.deleteSelectedNotes(),
+                      icon: Icon(Icons.delete))
+                ],
     );
   }
 
-  _deleteSelectedNotes() {
-    for (Note selectedNote in _selectedNotes) {
-      _notes.remove(selectedNote);
-    }
-    _selectedNotes.clear();
-    _updateListView();
-    Note.saveNotes(_notes);
-  }
-
-  _clearSelectedNotes() {
-    for (int i = 0; i < _noteItemKeys.length; i++) {
-      _noteItemKeys[i].currentState?.unselectItem();
-    }
-    setState(() {
-      _selectedNotes.clear();
-    });
-  }
-
-  _onNoteClicked(Note note) async {
-    final editedNote = await Navigator.pushNamed(
-        context, EditNoteScreen.routeName,
-        arguments: note) as Note?;
-
-    if (editedNote != null) {
-      for (Note note in _notes) {
-        if (note.id == editedNote.id) {
-          note = editedNote;
-        }
-      }
-      _notes = Note.sortNotes(_notes, SortOptions.updated, true);
-      Note.saveNotes(_notes);
-      _updateListView();
-    }
-  }
-
   _addNewNote() async {
-    _clearSelectedNotes();
+    _notesPageKey.currentState?.clearSelectedNotes();
     final note =
         await Navigator.pushNamed(context, EditNoteScreen.routeName) as Note?;
 
     if (note != null) {
       _notes.add(note);
-      _notes = Note.sortNotes(_notes, SortOptions.updated, true);
+      _notesPageKey.currentState?.setNotes(_notes);
+      _notesPageKey.currentState?.sortNotes(SortOptions.created);
       Note.saveNotes(_notes);
-      _updateListView();
     }
-  }
-
-  void _updateListView() {
-    _noteItemKeys.clear();
-    _noteItems.clear();
-    for (int i = 0; i < _notes.length; i++) {
-      _noteItemKeys.add(GlobalKey<NoteListItemState>());
-      _noteItems.add(NoteListItem(
-        _notes[i],
-        (bool value) {
-          setState(() {
-            if (value) {
-              _selectedNotes.add(_notes[i]);
-            } else {
-              _selectedNotes.remove(_notes[i]);
-            }
-          });
-        },
-        () => _selectedNotes.isEmpty
-            ? _onNoteClicked(_notes[i])
-            : _onNoteSelected(i),
-        _noteItemKeys[i],
-      ));
-    }
-    setState(() {});
-  }
-
-  _onNoteSelected(int i) {
-    _noteItemKeys[i].currentState?.selectItem();
   }
 
   Future<bool> _onBackPressed() async {
-    if (_selectedNotes.isEmpty) {
+    if (_notesPageKey.currentState!.selectedNotes.isEmpty) {
       return true;
     } else {
-      _clearSelectedNotes();
+      _notesPageKey.currentState!.clearSelectedNotes();
       return false;
     }
   }
