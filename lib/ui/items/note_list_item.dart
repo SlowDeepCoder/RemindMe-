@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:remind_me/util/color_constants.dart';
 
 import '../models/note.dart';
 
@@ -9,8 +10,7 @@ class NoteListItem extends StatefulWidget {
   final ValueChanged<bool> isSelected;
   final VoidCallback onClick;
 
-  const NoteListItem(
-      this.note, this.isSelected, this.onClick, this.key)
+  const NoteListItem(this.note, this.isSelected, this.onClick, this.key)
       : super(key: key);
 
   @override
@@ -23,27 +23,28 @@ class NoteListItemState extends State<NoteListItem> {
   @override
   Widget build(BuildContext context) {
     return Card(
+        color: _isSelected ? ColorConstants.mole : ColorConstants.soil,
         child: InkWell(
             onTap: widget.onClick,
             onLongPress: selectItem,
-            child: Container(
-              color: _isSelected ? Colors.yellow : Colors.white,
-              height: 100,
-              child: Column(children: <Widget>[
-                Text(
-                  widget.note.title,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                      fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                SizedBox(
-                    width: double.infinity,
-                    child: Text(
-                      widget.note.text,
-                      textAlign: TextAlign.start,
-                    ))
-              ]),
-            )));
+                child: Container(
+                  height: 75,
+                  padding: const EdgeInsets.all(5),
+                  child: Column(children: <Widget>[
+                    Text(
+                      widget.note.title,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                          fontSize: 20, fontWeight: FontWeight.bold),
+                    ),
+                    SizedBox(
+                        width: double.infinity,
+                        child: Text(
+                          widget.note.text,
+                          textAlign: TextAlign.start,
+                        ))
+                  ]),
+                )));
   }
 
   selectItem() {
@@ -55,7 +56,7 @@ class NoteListItemState extends State<NoteListItem> {
 
   unselectItem() {
     setState(() {
-    _isSelected = false;
+      _isSelected = false;
     });
   }
 }

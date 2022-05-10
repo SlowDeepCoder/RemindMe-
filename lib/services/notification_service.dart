@@ -47,8 +47,7 @@ class NotificationService {
   }
 
   setNotificationListener(List<Note> notes, Function(Note) onClick) {
-    if (_actionStreamSubscription != null) {
-      _actionStreamSubscription = AwesomeNotifications()
+    _actionStreamSubscription ??= AwesomeNotifications()
           .actionStream
           .listen((ReceivedNotification receivedNotification) {
         if (receivedNotification.payload != null) {
@@ -62,7 +61,6 @@ class NotificationService {
           }
         }
       });
-    }
   }
 
   static void setReminders(List<Reminder> reminders) async {

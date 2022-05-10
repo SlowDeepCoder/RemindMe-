@@ -1,10 +1,10 @@
-import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:flutter/material.dart';
-import 'package:remind_me/ui/items/note_list_item.dart';
 import 'package:remind_me/ui/models/note.dart';
-import '../../services/notification_service.dart';
+import 'package:remind_me/util/color_constants.dart';
 import '../pages/notes_page.dart';
 import '../pages/reminders_page.dart';
+import '../widgets/containers/background_container.dart';
+import '../widgets/mole_image.dart';
 import 'edit_note_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -17,20 +17,25 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final List<Note> _notes = [];
+
   final _notesPageKey = GlobalKey<NotesPageState>();
   final _remindersPageKey = GlobalKey<RemindersPageState>();
-  int pageIndex = 0;
-  final pageController = PageController(
+  final _moleImageKey = GlobalKey<MoleImageState>();
+
+  int _pageIndex = 0;
+  final _pageController = PageController(
     initialPage: 0,
     keepPage: true,
   );
 
+
+
   Widget buildPageView() {
     return PageView(
-      controller: pageController,
+      controller: _pageController,
       onPageChanged: (index) {
         setState(() {
-          pageIndex = index;
+          _pageIndex = index;
         });
       },
       children: <Widget>[
@@ -39,17 +44,25 @@ class _HomeScreenState extends State<HomeScreen> {
             setState(() {});
           },
           notes: _notes,
-          key: _notesPageKey, onNotesChange: (List<Note> notes) {
+          key: _notesPageKey,
+          onNotesChange: (List<Note> notes) {
             setState(() {
               _notes.clear();
               _notes.addAll(notes);
             });
             Note.saveNotes(_notes);
-        },
+          },
+          onNoteClicked: (note) => _openNote(note),
         ),
         RemindersPage(key: _remindersPageKey),
       ],
     );
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    _pageController.dispose();
   }
 
   @override
@@ -60,6 +73,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   _init() async {
     await _loadNotes();
+    _pageController.addListener(() {
+      _moleImageKey.currentState?.setMoleOffset(_pageController.offset);
+    });
   }
 
   _loadNotes() async {
@@ -72,62 +88,49 @@ class _HomeScreenState extends State<HomeScreen> {
     return WillPopScope(
         onWillPop: _onBackPressed,
         child: Scaffold(
-          appBar: _getAppBar(),
-          floatingActionButton: FloatingActionButton(
-            onPressed: () => _addNewNote(),
-            child: const Icon(Icons.add),
-          ),
-          floatingActionButtonLocation:
-              FloatingActionButtonLocation.centerDocked,
-          bottomNavigationBar: BottomNavigationBar(
-            currentIndex: pageIndex,
-            onTap: (index) {
-              setState(() {
-                pageIndex = index;
-                pageController.animateToPage(index,
-                    duration: const Duration(milliseconds: 500),
-                    curve: Curves.ease);
-              });
-            },
-            items: const [
-              BottomNavigationBarItem(icon: Icon(Icons.notes), label: 'Notes'),
-              BottomNavigationBarItem(
-                  icon: Icon(Icons.alarm), label: 'Reminders'),
-            ],
-          ),
-
-          // BottomAppBar(
-          //   shape: CircularNotchedRectangle(),
-          //   notchMargin: 5,
-          //   child: Row(
-          //     mainAxisSize: MainAxisSize.max,
-          //     mainAxisAlignment: MainAxisAlignment.spaceAround,
-          //     children: <Widget>[
-          //
-          //       IconButton(
-          //         icon: const Icon(
-          //           Icons.notes,
-          //           color: Colors.blue,
-          //         ),
-          //         onPressed: () {},
-          //       ),
-          //       IconButton(
-          //         icon: const Icon(
-          //           Icons.alarm,
-          //           color: Colors.blue,
-          //         ),
-          //         onPressed: () {},
-          //       ),
-          //     ],
-          //   ),
-          // ),
-          body: buildPageView(),
-        ));
+            appBar: _getAppBar(),
+            floatingActionButton: FloatingActionButton(
+              backgroundColor: ColorConstants.soil,
+              onPressed: () => _addNewNote(),
+              child: const Icon(Icons.add),
+            ),
+            floatingActionButtonLocation:
+                FloatingActionButtonLocation.centerDocked,
+            bottomNavigationBar: BottomNavigationBar(
+              backgroundColor: ColorConstants.soil,
+              selectedItemColor: Colors.white,
+              unselectedItemColor: Colors.brown.shade500,
+              currentIndex: _pageIndex,
+              onTap: (index) {
+                setState(() {
+                  _pageIndex = index;
+                  _pageController.animateToPage(index,
+                      duration: const Duration(milliseconds: 500),
+                      curve: Curves.ease);
+                });
+              },
+              items: const [
+                BottomNavigationBarItem(
+                    icon: Icon(Icons.notes), label: 'Notes'),
+                BottomNavigationBarItem(
+                    icon: Icon(Icons.alarm), label: 'Reminders'),
+              ],
+            ),
+            body: BackgroundContainer(
+              child: Stack(
+                children: [
+                  buildPageView(),
+                  MoleImage(
+                    key: _moleImageKey,
+                  )
+                ],
+              ),
+            )));
   }
 
   _getAppBar() {
     return AppBar(
-      title: const Text("RemindMe!"),
+      title: const Text("Mole Planner"),
       actions: _notesPageKey.currentState == null
           ? null
           : _notesPageKey.currentState!.selectedNotes.isEmpty
@@ -167,6 +170,26 @@ class _HomeScreenState extends State<HomeScreen> {
                       icon: Icon(Icons.delete))
                 ],
     );
+  }
+
+  _openNote(Note note) async {
+    final editedNote = await Navigator.pushNamed(
+        context, EditNoteScreen.routeName,
+        arguments: note) as Note?;
+
+    if (editedNote != null) {
+      for (int i = 0; i < _notes.length; i++) {
+        if (_notes[i].id == editedNote.id) {
+          setState(() {
+            _notes.replaceRange(i, i + 1, [editedNote]);
+          });
+          break;
+        }
+      }
+      Note.saveNotes(_notes);
+      _notesPageKey.currentState?.setNotes(_notes);
+      _notesPageKey.currentState?.sortNotes(SortOptions.created);
+    }
   }
 
   _addNewNote() async {

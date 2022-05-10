@@ -3,9 +3,11 @@ import 'package:intl/intl.dart';
 import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
 import 'package:remind_me/services/date_service.dart';
 import 'package:remind_me/services/notification_service.dart';
+import 'package:remind_me/util/color_constants.dart';
 import 'package:weekday_selector/weekday_selector.dart';
 import '../models/note.dart';
 import '../models/reminder.dart';
+import '../widgets/containers/background_container.dart';
 
 class EditNoteScreen extends StatefulWidget {
   final Note? note;
@@ -57,17 +59,33 @@ class _EditNoteScreenState extends State<EditNoteScreen> {
               onPressed: () => _onCheckPressed(), icon: const Icon(Icons.check))
         ],
       ),
-      body: Column(
+      body: BackgroundContainer(
+          child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Padding(
             padding: const EdgeInsets.all(8),
             child: TextField(
+              strutStyle:
+                  StrutStyle.fromTextStyle(TextStyle(color: Colors.white)),
               controller: _titleController,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                hintText: "Title",
-              ),
+              style: const TextStyle(color: ColorConstants.sand),
+              decoration: InputDecoration(
+                  hintText: "Title",
+                  fillColor: ColorConstants.soil.withOpacity(0.5),
+                  filled: true,
+                  hintStyle: TextStyle(color: ColorConstants.sand),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(
+                        width: 1.5,
+                        color: ColorConstants.sand.withOpacity(0.5)),
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(
+                        width: 2, color: ColorConstants.sand.withOpacity(0.8)),
+                    borderRadius: BorderRadius.circular(5),
+                  )),
             ),
           ),
           Padding(
@@ -76,10 +94,23 @@ class _EditNoteScreenState extends State<EditNoteScreen> {
               controller: _textController,
               minLines: 10,
               maxLines: 100,
-              decoration: const InputDecoration(
-                border: UnderlineInputBorder(),
-                hintText: "Note",
-              ),
+              style: const TextStyle(color: ColorConstants.sand),
+              decoration: InputDecoration(
+                  hintText: "Title",
+                  fillColor: ColorConstants.soil.withOpacity(0.5),
+                  filled: true,
+                  hintStyle: TextStyle(color: ColorConstants.sand),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(
+                        width: 1.5,
+                        color: ColorConstants.sand.withOpacity(0.5)),
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(
+                        width: 2, color: ColorConstants.sand.withOpacity(0.8)),
+                    borderRadius: BorderRadius.circular(5),
+                  )),
             ),
           ),
           Expanded(
@@ -141,9 +172,9 @@ class _EditNoteScreenState extends State<EditNoteScreen> {
                 child: const Text("Add reminder"),
                 style: ElevatedButton.styleFrom(
                     minimumSize: const Size.fromHeight(40)),
-              )),
+              ))
         ],
-      ),
+      )),
     );
   }
 
@@ -159,13 +190,19 @@ class _EditNoteScreenState extends State<EditNoteScreen> {
                   onTap: _addSingleReminder,
                   child: const SizedBox(
                     height: 50,
-                    child: Center(child: Text('Add single reminder')),
+                    child: Center(child: Text('Single reminder')),
                   )),
               InkWell(
                   onTap: _addRecurringReminder,
                   child: const SizedBox(
                     height: 50,
-                    child: Center(child: Text('Add reccuring reminder')),
+                    child: Center(child: Text('Weekly reminder')),
+                  )),
+              InkWell(
+                  onTap: _addRecurringReminder,
+                  child: const SizedBox(
+                    height: 50,
+                    child: Center(child: Text('Monthly reminder')),
                   )),
             ],
           )),
