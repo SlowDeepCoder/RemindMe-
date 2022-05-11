@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:remind_me/ui/models/note.dart';
 import 'package:remind_me/util/color_constants.dart';
 import '../pages/notes_page.dart';
-import '../pages/reminders_page.dart';
+import '../pages/activities_page.dart';
 import '../widgets/containers/background_container.dart';
 import '../widgets/mole_image.dart';
 import 'edit_note_screen.dart';
@@ -19,7 +19,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final List<Note> _notes = [];
 
   final _notesPageKey = GlobalKey<NotesPageState>();
-  final _remindersPageKey = GlobalKey<RemindersPageState>();
+  final _activitiesPageKey = GlobalKey<ActivitiesPageState>();
   final _moleImageKey = GlobalKey<MoleImageState>();
 
   int _pageIndex = 0;
@@ -52,10 +52,10 @@ class _HomeScreenState extends State<HomeScreen> {
           },
           onNoteClicked: (note) => _openNote(note),
         ),
-        RemindersPage(
-          key: _remindersPageKey,
+        ActivitiesPage(
+          key: _activitiesPageKey,
           notes: _notes,
-          onReminderClicked: (note) {
+          onActivityClicked: (note) {
             if (note != null) {
               _openNote(note);
             }
@@ -199,7 +199,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _notesPageKey.currentState?.sortNotes(SortOptions.created);
       }
       else if(_pageIndex == 1) {
-        _remindersPageKey.currentState?.setActivities(_notes);
+        _activitiesPageKey.currentState?.setActivities(_notes);
       }
     }
   }

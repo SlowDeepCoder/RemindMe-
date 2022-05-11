@@ -4,20 +4,20 @@ import 'package:remind_me/util/color_constants.dart';
 
 import '../models/note.dart';
 
-class NoteListItem extends StatefulWidget {
+class NoteItem extends StatefulWidget {
   final Key key;
   final Note note;
   final ValueChanged<bool> isSelected;
   final VoidCallback onClick;
 
-  const NoteListItem(this.note, this.isSelected, this.onClick, this.key)
+  const NoteItem(this.note, this.isSelected, this.onClick, this.key)
       : super(key: key);
 
   @override
-  State<NoteListItem> createState() => NoteListItemState();
+  State<NoteItem> createState() => NoteItemState();
 }
 
-class NoteListItemState extends State<NoteListItem> {
+class NoteItemState extends State<NoteItem> {
   bool _isSelected = false;
 
   @override

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:remind_me/services/date_service.dart';
 import 'package:remind_me/util/color_constants.dart';
 import '../ui/models/note.dart';
 import '../ui/models/reminder.dart';
@@ -74,9 +75,12 @@ class NotificationService {
     });
   }
 
-  static void setReminders(List<Reminder> reminders, Note note) async {
-    for (Reminder reminder in reminders) {
-      await setReminder(reminder, note);
+  static setReminders(Note note) async {
+    final now = DateService.getCurrentTimestamp();
+    for (Reminder reminder in note.reminders) {
+      if(reminder.timestamp > now) {
+        await setReminder(reminder, note);
+      }
     }
   }
 
@@ -85,20 +89,21 @@ class NotificationService {
       final date = DateTime.fromMillisecondsSinceEpoch(reminder.timestamp);
       final cron = CronHelper().hourly(referenceDateTime: date);
       AwesomeNotifications().createNotification(
-        schedule: NotificationAndroidCrontab(crontabExpression: cron),
+          schedule: NotificationCalendar.fromDate(date: date),
+        // schedule: NotificationAndroidCrontab(crontabExpression: cron),
         actionButtons: [
           NotificationActionButton(
               buttonType: ActionButtonType.KeepOnTop,
               key: 'COMPLETE',
               label: 'Complete'),
           NotificationActionButton(
-              buttonType: ActionButtonType.DisabledAction,
-              key: 'DISMISS',
-              label: 'Dismiss'),
-          NotificationActionButton(
               buttonType: ActionButtonType.KeepOnTop,
-              key: 'DELAY',
-              label: 'Delay 1 hour'),
+              key: 'IGNORE',
+              label: 'Ignore'),
+          // NotificationActionButton(
+          //     buttonType: ActionButtonType.KeepOnTop,
+          //     key: 'DELAY',
+          //     label: 'Delay 1 hour'),
         ],
         content: NotificationContent(
             id: reminder.id,
@@ -119,7 +124,7 @@ class NotificationService {
     AwesomeNotifications().cancelAll();
   }
 
-  static void cancelReminders(List<Reminder> reminders) async {
+  static cancelReminders(List<Reminder> reminders) async {
     for (Reminder reminder in reminders) {
       await cancelReminder(reminder);
     }
@@ -137,13 +142,13 @@ class NotificationService {
             key: 'COMPLETE',
             label: 'Complete'),
         NotificationActionButton(
-            buttonType: ActionButtonType.DisabledAction,
-            key: 'DISMISS',
-            label: 'Dismiss'),
-        NotificationActionButton(
             buttonType: ActionButtonType.KeepOnTop,
-            key: 'DELAY',
-            label: 'Delay 1 hour'),
+            key: 'IGNORE',
+            label: 'Ignore'),
+        // NotificationActionButton(
+        //     buttonType: ActionButtonType.KeepOnTop,
+        //     key: 'DELAY',
+        //     label: 'Delay 1 hour'),
       ],
       content: NotificationContent(
           id: reminder.id,

@@ -30,6 +30,7 @@ class MyApp extends StatelessWidget {
       },
       title: 'Mole Planner',
       theme: ThemeData(
+          fontFamily: "OpenSans",
           colorScheme: ColorScheme.fromSwatch().copyWith(
               primary: ColorConstants.soil,
               brightness: Brightness.light,

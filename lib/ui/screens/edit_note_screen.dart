@@ -23,8 +23,9 @@ class EditNoteScreen extends StatefulWidget {
 class _EditNoteScreenState extends State<EditNoteScreen> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _textController = TextEditingController();
-  final List<Reminder> _removedReminders = [];
-  final List<Reminder> _newReminders = [];
+
+  // final List<Reminder> _removedReminders = [];
+  // final List<Reminder> _newReminders = [];
   late final bool _isNewNote;
   late final Note note;
 
@@ -51,6 +52,13 @@ class _EditNoteScreenState extends State<EditNoteScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final List<Reminder> visibleReminders = [];
+    final now = DateTime.now();
+    for(Reminder reminder in note.reminders){
+      if(reminder.timestamp > now.millisecondsSinceEpoch){
+        visibleReminders.add(reminder);
+      }
+    }
     return Scaffold(
       appBar: AppBar(
         title: Text(_isNewNote ? "New note" : "Edit note #" + (note.id)),
@@ -61,7 +69,7 @@ class _EditNoteScreenState extends State<EditNoteScreen> {
       ),
       body: BackgroundContainer(
           child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: <Widget>[
           Padding(
             padding: const EdgeInsets.all(8),
@@ -115,52 +123,58 @@ class _EditNoteScreenState extends State<EditNoteScreen> {
                   )),
             ),
           ),
+          Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(5),
+              color: ColorConstants.soil.withOpacity(0.8),
+              child: Text(
+                "Upcoming reminders:",
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 20),
+              )),
           Expanded(
               child: ListView.builder(
-                  itemCount: note.reminders.length,
+                  itemCount: visibleReminders.length,
                   itemBuilder: (context, index) {
-                    final reminder = note.reminders[index];
+                    final reminder = visibleReminders[index];
 
                     return Padding(
                         padding: const EdgeInsets.all(8),
-                        child: SizedBox(
-                          height: 50,
-                          child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: <Widget>[
-                                Expanded(
-                                    child: InkWell(
-                                        onTap: () => {},
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: <Widget>[
-                                            const Text(
-                                              "Reminder",
-                                            ),
-                                            Text(
-                                                reminder.getTimeAndDateString())
-                                          ],
-                                        ))),
-                                IconButton(
-                                    onPressed: () {
-                                      NotificationService.sendTestReminder(
-                                          reminder, note);
-                                    },
-                                    color: Colors.blueAccent,
-                                    icon: const Icon(
-                                        Icons.notification_important_rounded)),
-                                IconButton(
-                                    onPressed: () {
-                                      setState(() {
-                                        note.reminders.remove(reminder);
-                                        _removedReminders.add(reminder);
-                                      });
-                                    },
-                                    color: Colors.red,
-                                    icon: const Icon(Icons.delete))
-                              ]),
-                        ));
+                        child: InkWell(
+                            onTap: () => _onReminderClicked(reminder),
+                            child: SizedBox(
+                              height: 50,
+                              child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: <Widget>[
+                                    Expanded(
+                                        child: Container(
+                                            child: Text(
+                                      reminder.getTimeAndDateString(),
+                                      style: TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold),
+                                    ))),
+                                    IconButton(
+                                        onPressed: () {
+                                          NotificationService.sendTestReminder(
+                                              reminder, note);
+                                        },
+                                        color: Colors.blueAccent,
+                                        icon: const Icon(Icons
+                                            .notification_important_rounded)),
+                                    IconButton(
+                                        onPressed: () {
+                                          setState(() {
+                                            note.reminders.remove(reminder);
+                                            // _removedReminders.add(reminder);
+                                          });
+                                        },
+                                        color: Colors.red,
+                                        icon: const Icon(Icons.delete))
+                                  ]),
+                            )));
                   })),
           // Padding(
           //     padding: EdgeInsets.all(10),
@@ -195,7 +209,7 @@ class _EditNoteScreenState extends State<EditNoteScreen> {
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               InkWell(
-                  onTap: _addSingleReminder,
+                  onTap: () => _setReminder(null),
                   child: const SizedBox(
                     height: 50,
                     child: Center(child: Text('Single reminder')),
@@ -217,8 +231,13 @@ class _EditNoteScreenState extends State<EditNoteScreen> {
     );
   }
 
-  _addSingleReminder() async {
-    Navigator.of(context).pop();
+  _onReminderClicked(Reminder reminder) {
+    _setReminder(reminder);
+  }
+
+  _setReminder(Reminder? reminder) async {
+    Navigator.of(context)
+        .popUntil(ModalRoute.withName(EditNoteScreen.routeName));
     DateTime now = DateTime.now();
     DateTime inAYear = DateTime(now.year + 1, now.month, now.day);
     DateTime? pickedDate = await showDatePicker(
@@ -236,11 +255,15 @@ class _EditNoteScreenState extends State<EditNoteScreen> {
       if (pickedTime != null) {
         DateTime pickedDateTime = DateTime(pickedDate.year, pickedDate.month,
             pickedDate.day, pickedTime.hour, pickedTime.minute);
-        final reminder = Reminder.create(false, note.id,
-            pickedDateTime.millisecondsSinceEpoch);
         setState(() {
-          note.addReminder(reminder);
-          _newReminders.add(reminder);
+          if (reminder == null) {
+            final newReinder = Reminder.create(
+                false, note.id, pickedDateTime.millisecondsSinceEpoch);
+            note.addReminder(newReinder);
+          } else {
+            reminder.timestamp = pickedDateTime.millisecondsSinceEpoch;
+          }
+          // _newReminders.add(reminder);
         });
       }
     }
@@ -300,8 +323,8 @@ class _EditNoteScreenState extends State<EditNoteScreen> {
       note.title = "Untitled";
     }
 
-    NotificationService.cancelReminders(_removedReminders);
-    NotificationService.setReminders(_newReminders, note);
+    await NotificationService.cancelReminders(note.reminders);
+    await NotificationService.setReminders(note);
     Navigator.pop(context, note);
   }
 }

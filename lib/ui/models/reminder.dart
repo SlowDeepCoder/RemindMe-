@@ -34,7 +34,7 @@ class Reminder {
 
   String getTimeAndDateString() {
     final date = DateTime.fromMillisecondsSinceEpoch(timestamp);
-    final dateString = DateFormat('HH:mm, dd MMM yyyy').format(date);
+    final dateString = DateFormat('dd MMM yyyy, HH:mm').format(date);
     return dateString;
   }
 
