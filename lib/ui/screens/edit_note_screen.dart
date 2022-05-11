@@ -74,7 +74,8 @@ class _EditNoteScreenState extends State<EditNoteScreen> {
                   hintText: "Title",
                   fillColor: ColorConstants.soil.withOpacity(0.5),
                   filled: true,
-                  hintStyle: TextStyle(color: ColorConstants.sand),
+                  hintStyle:
+                      TextStyle(color: ColorConstants.sand.withOpacity(0.5)),
                   enabledBorder: OutlineInputBorder(
                     borderSide: BorderSide(
                         width: 1.5,
@@ -92,14 +93,15 @@ class _EditNoteScreenState extends State<EditNoteScreen> {
             padding: const EdgeInsets.all(8),
             child: TextField(
               controller: _textController,
-              minLines: 10,
-              maxLines: 100,
+              minLines: 2,
+              maxLines: null,
               style: const TextStyle(color: ColorConstants.sand),
               decoration: InputDecoration(
-                  hintText: "Title",
+                  hintText: "Description",
                   fillColor: ColorConstants.soil.withOpacity(0.5),
                   filled: true,
-                  hintStyle: TextStyle(color: ColorConstants.sand),
+                  hintStyle:
+                      TextStyle(color: ColorConstants.sand.withOpacity(0.5)),
                   enabledBorder: OutlineInputBorder(
                     borderSide: BorderSide(
                         width: 1.5,
@@ -118,10 +120,7 @@ class _EditNoteScreenState extends State<EditNoteScreen> {
                   itemCount: note.reminders.length,
                   itemBuilder: (context, index) {
                     final reminder = note.reminders[index];
-                    final date = DateTime.fromMillisecondsSinceEpoch(
-                        reminder.timestamp!);
-                    final dateString =
-                        DateFormat('hh:mm dd MMM yyyy').format(date);
+
                     return Padding(
                         padding: const EdgeInsets.all(8),
                         child: SizedBox(
@@ -139,9 +138,18 @@ class _EditNoteScreenState extends State<EditNoteScreen> {
                                             const Text(
                                               "Reminder",
                                             ),
-                                            Text(dateString)
+                                            Text(
+                                                reminder.getTimeAndDateString())
                                           ],
                                         ))),
+                                IconButton(
+                                    onPressed: () {
+                                      NotificationService.sendTestReminder(
+                                          reminder, note);
+                                    },
+                                    color: Colors.blueAccent,
+                                    icon: const Icon(
+                                        Icons.notification_important_rounded)),
                                 IconButton(
                                     onPressed: () {
                                       setState(() {
@@ -229,7 +237,7 @@ class _EditNoteScreenState extends State<EditNoteScreen> {
         DateTime pickedDateTime = DateTime(pickedDate.year, pickedDate.month,
             pickedDate.day, pickedTime.hour, pickedTime.minute);
         final reminder = Reminder.create(false, note.id,
-            timestamp: pickedDateTime.millisecondsSinceEpoch);
+            pickedDateTime.millisecondsSinceEpoch);
         setState(() {
           note.addReminder(reminder);
           _newReminders.add(reminder);
@@ -293,7 +301,7 @@ class _EditNoteScreenState extends State<EditNoteScreen> {
     }
 
     NotificationService.cancelReminders(_removedReminders);
-    NotificationService.setReminders(_newReminders);
+    NotificationService.setReminders(_newReminders, note);
     Navigator.pop(context, note);
   }
 }

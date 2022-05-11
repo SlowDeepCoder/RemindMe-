@@ -28,8 +28,6 @@ class _HomeScreenState extends State<HomeScreen> {
     keepPage: true,
   );
 
-
-
   Widget buildPageView() {
     return PageView(
       controller: _pageController,
@@ -54,7 +52,15 @@ class _HomeScreenState extends State<HomeScreen> {
           },
           onNoteClicked: (note) => _openNote(note),
         ),
-        RemindersPage(key: _remindersPageKey),
+        RemindersPage(
+          key: _remindersPageKey,
+          notes: _notes,
+          onReminderClicked: (note) {
+            if (note != null) {
+              _openNote(note);
+            }
+          },
+        ),
       ],
     );
   }
@@ -173,6 +179,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   _openNote(Note note) async {
+    Navigator.of(context).popUntil(ModalRoute.withName(HomeScreen.routeName));
     final editedNote = await Navigator.pushNamed(
         context, EditNoteScreen.routeName,
         arguments: note) as Note?;
@@ -187,8 +194,13 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       }
       Note.saveNotes(_notes);
-      _notesPageKey.currentState?.setNotes(_notes);
-      _notesPageKey.currentState?.sortNotes(SortOptions.created);
+      if(_pageIndex == 0) {
+        _notesPageKey.currentState?.setNotes(_notes);
+        _notesPageKey.currentState?.sortNotes(SortOptions.created);
+      }
+      else if(_pageIndex == 1) {
+        _remindersPageKey.currentState?.setActivities(_notes);
+      }
     }
   }
 

@@ -21,7 +21,6 @@ class NotesPage extends StatefulWidget {
 
   @override
   State<NotesPage> createState() => NotesPageState();
-
 }
 
 class NotesPageState extends State<NotesPage> {
@@ -44,24 +43,16 @@ class NotesPageState extends State<NotesPage> {
 
   _initNotifications() async {
     await NotificationService().initNotifications();
-    NotificationService().setNotificationListener(_notes, _onNoteClicked);
+    NotificationService().setNotificationListeners(_notes, _onNoteClicked);
   }
 
   @override
   Widget build(BuildContext context) {
-    return
-        // Stack(children: [
-        // Row(
-        //     mainAxisAlignment: MainAxisAlignment.center,
-        //     children: [Icon(Icons.arrow_drop_down), Text("Sort by: created")]),
-        Container(
-            child: ListView.builder(
-                itemCount: _noteItems.length,
-                itemBuilder: (context, index) {
-                  return _noteItems[index];
-                }))
-        // ])
-        ;
+    return ListView.builder(
+        itemCount: _noteItems.length,
+        itemBuilder: (context, index) {
+          return _noteItems[index];
+        });
   }
 
   // _getAppBar() {
@@ -123,20 +114,6 @@ class NotesPageState extends State<NotesPage> {
 
   _onNoteClicked(Note note) async {
     widget.onNoteClicked(note);
-    // final editedNote = await Navigator.pushNamed(
-    //     context, EditNoteScreen.routeName,
-    //     arguments: note) as Note?;
-    //
-    // if (editedNote != null) {
-    //   for (int i = 0; i < _notes.length; i++) {
-    //     if (_notes[i].id == editedNote.id) {
-    //       _notes.replaceRange(i, i + 1, [editedNote]);
-    //       widget.onNotesChange(_notes);
-    //       break;
-    //     }
-    //   }
-    //   sortNotes(SortOptions.created);
-    // }
   }
 
   setNotes(List<Note> notes) {

@@ -83,7 +83,7 @@ class Note {
       final reminder = Reminder(
           decodedReminder["id"] as int,
           decodedReminder["isRecurring"] as bool,
-          decodedReminder["timestamp"] as int?,
+          decodedReminder["timestamp"] as int,
           recurringDays,
           decodedReminder["noteId"] as String);
       reminders.add(reminder);
@@ -111,6 +111,16 @@ class Note {
       "reminders": encodedReminders,
     };
   }
+
+  static Note? getNote(List<Note> notes, String id){
+    for(Note note in notes){
+      if(note.id == id){
+        return note;
+      }
+    }
+    return null;
+  }
+
 
   static saveNotes(List<Note> notes) async {
     SharedPreferences sharedPreferences = await SharedPreferences.getInstance();

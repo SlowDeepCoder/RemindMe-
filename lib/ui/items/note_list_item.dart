@@ -27,24 +27,18 @@ class NoteListItemState extends State<NoteListItem> {
         child: InkWell(
             onTap: widget.onClick,
             onLongPress: selectItem,
-                child: Container(
-                  height: 75,
-                  padding: const EdgeInsets.all(5),
-                  child: Column(children: <Widget>[
-                    Text(
-                      widget.note.title,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                          fontSize: 20, fontWeight: FontWeight.bold),
-                    ),
-                    SizedBox(
-                        width: double.infinity,
-                        child: Text(
-                          widget.note.text,
-                          textAlign: TextAlign.start,
-                        ))
-                  ]),
-                )));
+            child: Container(
+                // height: 50,
+                padding: const EdgeInsets.all(5),
+                child: Padding(
+                  padding: EdgeInsets.all(10),
+                  child: Text(
+                    widget.note.title,
+                    textAlign: TextAlign.start,
+                    style: const TextStyle(
+                        fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                ))));
   }
 
   selectItem() {
