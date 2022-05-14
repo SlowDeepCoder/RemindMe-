@@ -1,76 +1,67 @@
-import 'dart:convert';
-import 'dart:math';
+import 'dart:ui';
 
-import 'package:collection/collection.dart';
-import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/material.dart';
 
-import 'note.dart';
-
-class Activity {
-  final String noteId;
-  int timestamp;
-  bool? isCompleted;
-
-  Activity(this.noteId, this.timestamp, this.isCompleted);
+import '../../services/date_service.dart';
+import 'reminder.dart';
+import '../../util/color_constants.dart';
 
 
-  String getTimeAndDateString() {
-    final date = DateTime.fromMillisecondsSinceEpoch(timestamp);
-    final dateString = DateFormat('HH:mm, dd MMM yyyy').format(date);
-    return dateString;
+enum ColorOptions { red, blue, green, yellow, brown }
+
+abstract class Activity {
+  late final String id;
+  late String title;
+  late final int createdAt;
+  late int updatedAt;
+  late final List<Reminder> reminders;
+  // late final ActivityType activityType;
+  late ColorOptions color;
+
+  String generateId() {
+    return DateService.getCurrentTimestamp().toString();
   }
 
-  String getTimeString() {
-    final date = DateTime.fromMillisecondsSinceEpoch(timestamp);
-    final dateString = DateFormat('HH:mm').format(date);
-    return dateString;
+  addReminder(Reminder reminder) {
+    reminders.add(reminder);
   }
 
-  factory Activity.fromJson(Map<String, dynamic> parsedJson) {
-    return Activity(
-      parsedJson["noteId"],
-      parsedJson["timestamp"],
-      parsedJson["isCompleted"],
-    );
+  removeReminder(Reminder reminder) {
+    reminders.remove(reminder);
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      "noteId": noteId,
-      "timestamp": timestamp,
-      "isCompleted": isCompleted,
-    };
+  static Activity? getActivity(List<List<Activity>> lists, String id) {
+    List<Activity> activities = [];
+    for (List<Activity> list in lists) {
+      activities.addAll(list);
+    }
+    final activity = _getActivity(activities, id);
+    return activity;
   }
 
-  bool isEqual(Activity savedActivity) {
-    if (savedActivity.noteId == noteId){
-      if(savedActivity.timestamp == timestamp){
-        return true;
+  static Activity? _getActivity(List<Activity> activities, String id) {
+    for (Activity activity in activities) {
+      if (activity.id == id) {
+        return activity;
       }
     }
-    return false;
+    return null;
   }
 
-
-  static saveActivities(List<Activity> activities) async {
-    SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
-    List<String> encodedActivities =
-    activities.map((activity) => jsonEncode(activity.toJson())).toList();
-    print(encodedActivities);
-    await sharedPreferences.setStringList('activities', encodedActivities);
-  }
-
-  static Future<List<Activity>> loadActivities() async {
-    SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
-    final encodedActivities = sharedPreferences.getStringList('activities');
-    final List<Activity> list = [];
-    if (encodedActivities != null) {
-      for (String string in encodedActivities) {
-        final decodedActivities = jsonDecode(string);
-        list.add(Activity.fromJson(decodedActivities));
-      }
+  Color getColor() {
+    switch (color) {
+      case ColorOptions.blue:
+        return Colors.blue;
+      case ColorOptions.red:
+        return Colors.red.shade900;
+      case ColorOptions.yellow:
+        return Colors.yellow;
+      case ColorOptions.green:
+        return Colors.green;
+      case ColorOptions.brown:
+        return ColorConstants.soil;
     }
-    return list;
   }
+
+  String getContent();
 }

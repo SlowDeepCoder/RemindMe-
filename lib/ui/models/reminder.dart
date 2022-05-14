@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:collection/collection.dart';
 import 'package:intl/intl.dart';
 
+import 'activity.dart';
 import 'note.dart';
 
 extension on List {
@@ -13,31 +14,28 @@ extension on List {
   }
 }
 
-class Reminder {
-  late int _id;
-  final bool isRecurring;
-  int timestamp;
-  List<bool>? recurringDays;
-  int? hour;
-  int? minute;
-  final String noteId;
+enum ActivityType { note, checklist, event }
 
-  Reminder.create(this.isRecurring, this.noteId,
-      this.timestamp, { this.recurringDays, this.hour, this.minute}) {
-    _id = _generateId();
+class Reminder {
+  late int id;
+  late int timestamp;
+  late bool? isCompleted;
+  final String activityId;
+  late final ActivityType activityType;
+
+  Reminder.create(this.activityId, this.activityType, this.timestamp) {
+    id = _generateId();
+    isCompleted = null;
   }
 
-  Reminder(this._id, this.isRecurring, this.timestamp, this.recurringDays,
-      this.noteId);
+  Reminder(this.id, this.activityType,  this.timestamp, this.activityId, this.isCompleted);
 
-  int get id => _id;
 
   String getTimeAndDateString() {
     final date = DateTime.fromMillisecondsSinceEpoch(timestamp);
     final dateString = DateFormat('dd MMM yyyy, HH:mm').format(date);
     return dateString;
   }
-
 
   String getTimeString() {
     final date = DateTime.fromMillisecondsSinceEpoch(timestamp);
@@ -55,31 +53,43 @@ class Reminder {
     final recurringDays = json.decode(encodedRecurringDays) as List<bool>?;
     return Reminder(
       parsedJson["id"],
-      parsedJson["isRecurring"],
+      ActivityType.values.byName(parsedJson["activityType"]),
       parsedJson["timestamp"],
-      recurringDays,
       parsedJson["noteId"],
+      parsedJson["isCompleted"],
     );
   }
 
   Map<String, dynamic> toJson() {
-    String encodedRecurringDays = recurringDays != null
-        ? jsonEncode(recurringDays!.map((value) => value.toString()).toList())
-            .toString()
-        : jsonEncode(null);
+    // String encodedRecurringDays = recurringDays != null
+    //     ? jsonEncode(recurringDays!.map((value) => value.toString()).toList())
+    //         .toString()
+    //     : jsonEncode(null);
     return {
       "id": id,
-      "isRecurring": isRecurring,
+      "activityType": activityType.name,
       "timestamp": timestamp,
-      "recurringDays": encodedRecurringDays,
-      "noteId": noteId,
+      "noteId": activityId,
+      "isCompleted": isCompleted,
     };
   }
 
-  static List<Reminder> getReminders(List<Note> notes) {
+  static List<Reminder> getReminders(List<List<Activity>> lists) {
+    List<Activity> activities = [];
+    for (List<Activity> list in lists) {
+      activities.addAll(list);
+    }
+    final reminders = _getReminders(activities);
+    return reminders;
+  }
+
+
+
+
+  static List<Reminder> _getReminders(List<Activity> activities) {
     List<Reminder> reminders = [];
-    for (Note note in notes) {
-      reminders.addAll(note.reminders);
+    for (Activity activity in activities) {
+      reminders.addAll(activity.reminders);
     }
     sortReminders(reminders);
     return reminders;
@@ -92,22 +102,22 @@ class Reminder {
     return reminders;
   }
 
-  static bool isEqual(List<Reminder> rl1, List<Reminder> rl2) {
-    if (rl1.length == rl2.length) {
-      for (int i = 0; i < rl1.length; i++) {
-        final r1 = rl1[i];
-        final r2 = rl2[i];
-        if (r1.id != r2.id ||
-            r1.isRecurring != r2.isRecurring ||
-            r1.timestamp != r2.timestamp) {
-          Function equals = const ListEquality().equals;
-          if (!equals(r1.recurringDays, r2.recurringDays)) {
-            return false;
-          }
-        }
-      }
-      return true;
-    }
-    return false;
-  }
+  // static bool isEqual(List<Reminder> rl1, List<Reminder> rl2) {
+  //   if (rl1.length == rl2.length) {
+  //     for (int i = 0; i < rl1.length; i++) {
+  //       final r1 = rl1[i];
+  //       final r2 = rl2[i];
+  //       if (r1.id != r2.id ||
+  //           r1.isRecurring != r2.isRecurring ||
+  //           r1.timestamp != r2.timestamp) {
+  //         Function equals = const ListEquality().equals;
+  //         if (!equals(r1.recurringDays, r2.recurringDays)) {
+  //           return false;
+  //         }
+  //       }
+  //     }
+  //     return true;
+  //   }
+  //   return false;
+  // }
 }

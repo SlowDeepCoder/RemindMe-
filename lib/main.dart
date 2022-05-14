@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:remind_me/services/screen_manager.dart';
+import 'package:remind_me/ui/models/checklist.dart';
 import 'package:remind_me/ui/models/note.dart';
+import 'package:remind_me/ui/screens/edit_checklist_screen.dart';
 import 'package:remind_me/ui/screens/home_screen.dart';
 import 'package:remind_me/ui/screens/edit_note_screen.dart';
 import 'package:remind_me/util/color_constants.dart';
@@ -65,7 +67,9 @@ class MyApp extends StatelessWidget {
       routes: {
         HomeScreen.routeName: (context) => const HomeScreen(),
         EditNoteScreen.routeName: (context) => EditNoteScreen(
-            note: ModalRoute.of(context)!.settings.arguments as Note?)
+            note: ModalRoute.of(context)!.settings.arguments as Note?),
+        EditChecklistScreen.routeName: (context) => EditChecklistScreen(
+            checklist: ModalRoute.of(context)!.settings.arguments as Checklist?),
       },
     );
   }

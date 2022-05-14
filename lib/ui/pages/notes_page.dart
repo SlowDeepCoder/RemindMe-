@@ -1,6 +1,7 @@
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:flutter/material.dart';
 import 'package:remind_me/ui/items/note_item.dart';
+import 'package:remind_me/ui/models/checklist.dart';
 import 'package:remind_me/ui/models/note.dart';
 import '../../services/notification_service.dart';
 import '../screens/edit_note_screen.dart';
@@ -10,12 +11,14 @@ class NotesPage extends StatefulWidget {
   final Function(List<Note> notes) onNotesChange;
   final Function(Note note) onNoteClicked;
   final List<Note> notes;
+  final List<Checklist> checklists;
 
   const NotesPage({
     required this.onSelectionChange,
     required this.onNotesChange,
     required this.onNoteClicked,
     required this.notes,
+    required this.checklists,
     Key? key,
   }) : super(key: key);
 
@@ -54,44 +57,6 @@ class NotesPageState extends State<NotesPage> {
           return _noteItems[index];
         });
   }
-
-  // _getAppBar() {
-  //   return AppBar(
-  //     title: const Text("RemindMe!"),
-  //     actions: _selectedNotes.isEmpty
-  //         ? [
-  //             PopupMenuButton(
-  //                 // add icon, by default "3 dot" icon
-  //                 // icon: Icon(Icons.book)
-  //                 itemBuilder: (context) {
-  //               return [
-  //                 const PopupMenuItem<int>(
-  //                   value: 0,
-  //                   child: Text("Sort by: Created"),
-  //                 ),
-  //                 const PopupMenuItem<int>(
-  //                   value: 1,
-  //                   child: Text("Sort by: Edited"),
-  //                 ),
-  //               ];
-  //             }, onSelected: (value) {
-  //               if (value == 0) {
-  //                 _sortNotes(SortOptions.created);
-  //               } else if (value == 1) {
-  //                 _sortNotes(SortOptions.updated);
-  //               }
-  //             }),
-  //           ]
-  //         : [
-  //             IconButton(
-  //                 onPressed: () => _clearSelectedNotes(),
-  //                 icon: Icon(Icons.highlight_remove)),
-  //             IconButton(
-  //                 onPressed: () => _deleteSelectedNotes(),
-  //                 icon: Icon(Icons.delete))
-  //           ],
-  //   );
-  // }
 
   deleteSelectedNotes() {
     for (Note selectedNote in selectedNotes) {
@@ -153,5 +118,21 @@ class NotesPageState extends State<NotesPage> {
 
   _onNoteSelected(int i) {
     _noteItemKeys[i].currentState?.selectItem();
+  }
+
+  AppBar getAppBar(AppBar standardAppBar) {
+    return selectedNotes.isEmpty
+        ? standardAppBar
+        : AppBar(
+            title: const Text("Mole Planner"),
+            actions: [
+              IconButton(
+                  onPressed: () => clearSelectedNotes(),
+                  icon: Icon(Icons.highlight_remove)),
+              IconButton(
+                  onPressed: () => deleteSelectedNotes(),
+                  icon: Icon(Icons.delete))
+            ],
+          );
   }
 }

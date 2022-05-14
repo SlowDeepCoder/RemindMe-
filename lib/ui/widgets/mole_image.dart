@@ -7,7 +7,9 @@ class MoleImage extends StatefulWidget {
   static const double moleWidth = 100;
   static const double moleHeight = 50;
 
-  const MoleImage({Key? key}) : super(key: key);
+  final int pages;
+
+  const MoleImage({required this.pages, Key? key}) : super(key: key);
 
   @override
   State<MoleImage> createState() => MoleImageState();
@@ -21,10 +23,12 @@ class MoleImageState extends State<MoleImage> {
   @override
   Widget build(BuildContext context) {
     final ratio = _moleOffset/ScreenManager().screenWidth;
-    final bottomOffset = sin(ratio*pi)*25;
-    final leftOffset = _moleOffset - ratio*100;
+    final ratio2 = widget.pages == 4 ? 1 : 4;
+    final bottomOffset = (sin(ratio*pi*ratio2)*25).abs();
+    final leftOffset = (_moleOffset - ratio*100)/(widget.pages-1);
     double scaleX = isDirectionRight ? -1 : 1;
-    angle = sin(_moleOffset/10)/5+0.5;
+    final angleNoWiggle = (sin(ratio*pi)*25/100).abs()+0.3;
+    angle = (sin(ratio*pi*3)*25/100)+0.3;
     return
       Positioned(
           bottom: bottomOffset,
@@ -46,7 +50,7 @@ class MoleImageState extends State<MoleImage> {
       if(offset == 0){
         isDirectionRight = true;
       }
-      else if(offset == ScreenManager().screenWidth){
+      else if(offset == ScreenManager().screenWidth*(widget.pages-1)){
         isDirectionRight = false;
       }
       else {

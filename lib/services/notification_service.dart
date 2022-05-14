@@ -5,6 +5,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:remind_me/services/date_service.dart';
 import 'package:remind_me/util/color_constants.dart';
+import '../ui/models/activity.dart';
 import '../ui/models/note.dart';
 import '../ui/models/reminder.dart';
 
@@ -75,19 +76,20 @@ class NotificationService {
     });
   }
 
-  static setReminders(Note note) async {
+  static setReminders(Activity activity) async {
     final now = DateService.getCurrentTimestamp();
-    for (Reminder reminder in note.reminders) {
+    for (Reminder reminder in activity.reminders) {
       if(reminder.timestamp > now) {
-        await setReminder(reminder, note);
+        await setReminder(reminder, activity);
       }
     }
   }
 
-  static setReminder(Reminder reminder, Note note) async {
-    if (!reminder.isRecurring) {
+  static setReminder(Reminder reminder, Activity activity) async {
       final date = DateTime.fromMillisecondsSinceEpoch(reminder.timestamp);
       final cron = CronHelper().hourly(referenceDateTime: date);
+      final title = activity.title;
+      final text = activity.getContent();
       AwesomeNotifications().createNotification(
           schedule: NotificationCalendar.fromDate(date: date),
         // schedule: NotificationAndroidCrontab(crontabExpression: cron),
@@ -108,16 +110,15 @@ class NotificationService {
         content: NotificationContent(
             id: reminder.id,
             channelKey: 'basic_channel',
-            title: note.title,
-            body: note.text,
+            title: title,
+            body: text,
             icon: 'resource://drawable/cute_mole_face',
             backgroundColor: ColorConstants.soil,
             color: ColorConstants.soil,
             notificationLayout: NotificationLayout.BigText,
             showWhen: true,
-            payload: {"noteId": reminder.noteId}),
+            payload: {"noteId": reminder.activityId}),
       );
-    }
   }
 
   static cancelAllNotifications() {
@@ -134,7 +135,9 @@ class NotificationService {
     await AwesomeNotifications().cancel(reminder.id);
   }
 
-  static sendTestReminder(Reminder reminder, Note note) {
+  static sendTestReminder(Reminder reminder, Activity activity) {
+    final title = activity.title;
+    final text = activity.getContent();
     AwesomeNotifications().createNotification(
       actionButtons: [
         NotificationActionButton(
@@ -153,14 +156,14 @@ class NotificationService {
       content: NotificationContent(
           id: reminder.id,
           channelKey: 'basic_channel',
-          title: note.title,
-          body: note.text,
-          icon: 'resource://drawable/cute_mole_face',
+          title: title,
+          body: text,
+          icon: 'resource://drawable/mole_siluette',
           backgroundColor: ColorConstants.soil,
           color: ColorConstants.soil,
           notificationLayout: NotificationLayout.BigText,
           showWhen: true,
-          payload: {"noteId": reminder.noteId}),
+          payload: {"noteId": reminder.activityId}),
     );
   }
 }

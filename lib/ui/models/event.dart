@@ -10,12 +10,11 @@ import 'activity.dart';
 import '../../services/date_service.dart';
 import '../../services/notification_service.dart';
 
-enum SortOptions { created, updated }
 
-class Note extends Activity {
+class Event extends Activity {
   late String text;
 
-  Note.create() {
+  Event.create() {
     id = generateId();
     title = "";
     text = "";
@@ -25,7 +24,7 @@ class Note extends Activity {
     color = ColorOptions.brown;
   }
 
-  Note(String id, int createdAt, int updatedAt, String title, this.text,
+  Event(String id, int createdAt, int updatedAt, String title, this.text,
       List<Reminder> reminders, ColorOptions color) {
     this.id = id;
     this.createdAt = createdAt;
@@ -35,19 +34,8 @@ class Note extends Activity {
     this.color = color;
   }
 
-  //Todo: Not quite working
-  // bool isEqual(Note? note) {
-  //   if (note == null) return false;
-  //   return (note.id == id &&
-  //       note.createdAt == createdAt &&
-  //       note.updatedAt == updatedAt &&
-  //       note.title == title &&
-  //       note.text == text &&
-  //       Reminder.isEqual(note.reminders, reminders));
-  // }
 
-  factory Note.fromJson(Map<String, dynamic> parsedJson) {
-    print(parsedJson);
+  factory Event.fromJson(Map<String, dynamic> parsedJson) {
     final encodedReminders = parsedJson["reminders"];
     final decodedReminders = json.decode(encodedReminders) as List;
     List<Reminder> reminders = [];
@@ -56,7 +44,7 @@ class Note extends Activity {
       //     json.decode(decodedReminder["recurringDays"]) as List<bool>?;
       final reminder = Reminder(
           decodedReminder["id"] as int,
-          ActivityType.values.byName(decodedReminder["activityType"] as String),
+          ActivityType.values.byName(decodedReminder["activityType"]),
           // decodedReminder["isRecurring"] as bool,
           decodedReminder["timestamp"] as int,
           // recurringDays,
@@ -65,14 +53,14 @@ class Note extends Activity {
       reminders.add(reminder);
     }
     // decodedReminders.isEmpty ? [] : decodedReminders as List<Reminder>;
-    return Note(
+    return Event(
         parsedJson["id"],
         parsedJson["createdAt"],
         parsedJson["updatedAt"],
         parsedJson["title"],
       parsedJson["text"],
       reminders,
-        ColorOptions.values.byName(parsedJson["color"]),
+        ColorOptions.values.byName(parsedJson["color"])
     );
   }
 
@@ -91,59 +79,40 @@ class Note extends Activity {
     };
   }
 
-  static Note? getNote(List<Note> notes, String id) {
-    for (Note note in notes) {
-      if (note.id == id) {
-        return note;
+  static Event? getEvent(List<Event> events, String id) {
+    for (Event event in events) {
+      if (event.id == id) {
+        return event;
       }
     }
     return null;
   }
 
-  static saveNotes(List<Note> notes) async {
+  static saveEvents(List<Event> notes) async {
     SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
     List<String> notesEncoded =
         notes.map((note) => jsonEncode(note.toJson())).toList();
-    await sharedPreferences.setStringList('notes', notesEncoded);
+    await sharedPreferences.setStringList('events', notesEncoded);
   }
 
-  static Future<List<Note>> loadNotes() async {
+  static Future<List<Event>> loadEvents() async {
     SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
-    final notesEncoded = sharedPreferences.getStringList('notes');
-    final List<Note> list = [];
+    final notesEncoded = sharedPreferences.getStringList('events');
+    final List<Event> list = [];
     if (notesEncoded != null) {
       for (String string in notesEncoded) {
         final noteDecoded = jsonDecode(string);
-        list.add(Note.fromJson(noteDecoded));
+        list.add(Event.fromJson(noteDecoded));
       }
     }
     return list;
   }
 
-  static List<Note> sortNotes(
-      List<Note> notes, SortOptions sortOption, bool reverse) {
-    switch (sortOption) {
-      case SortOptions.created:
-        notes.sort((a, b) {
-          return Comparable.compare(a.createdAt, b.createdAt);
-        });
-        break;
-      case SortOptions.updated:
-        notes.sort((a, b) {
-          return Comparable.compare(a.updatedAt, b.updatedAt);
-        });
-        break;
-    }
-    if (reverse) {
-      notes = notes.reversed.toList();
-    }
-    return notes;
-  }
 
-  static Note copy(Note note) {
-    List<Reminder> remindersCopy = [...note.reminders];
-    return Note(note.id, note.updatedAt, note.createdAt, note.title, note.text,
-        remindersCopy, note.color);
+  static Event copy(Event event) {
+    List<Reminder> remindersCopy = [...event.reminders];
+    return Event(event.id, event.updatedAt, event.createdAt, event.title, event.text,
+        remindersCopy, event.color);
   }
 
   @override
