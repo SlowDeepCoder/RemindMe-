@@ -9,18 +9,18 @@ import '../ui/models/activity.dart';
 import '../ui/models/note.dart';
 import '../ui/models/reminder.dart';
 
-class NotificationService {
-  static NotificationService? _instance;
+class NotificationManager {
+  static NotificationManager? _instance;
   static const String title = "New activity";
   StreamSubscription<ReceivedAction>? _actionStreamSubscription;
 
   // StreamSubscription<ReceivedNotification>? _notificationStreamSubscription;
   bool hasBeenInitialized = false;
 
-  NotificationService._internal();
+  NotificationManager._internal();
 
-  factory NotificationService() =>
-      _instance ??= NotificationService._internal();
+  factory NotificationManager() =>
+      _instance ??= NotificationManager._internal();
 
   initNotifications() async {
     if (!hasBeenInitialized) {
@@ -52,7 +52,7 @@ class NotificationService {
     }
   }
 
-  setNotificationListeners(List<Note> notes, Function(Note) onClick) {
+  setNotificationListeners(List<Activity> activities, Function(Activity) onClick) {
     _actionStreamSubscription ??=
         AwesomeNotifications().actionStream.listen((ReceivedAction event) {
       print('event received!');
@@ -65,9 +65,9 @@ class NotificationService {
         }
       } else if (eventData["payload"] != null) {
         if (eventData["payload"].containsKey("noteId")) {
-          for (Note note in notes) {
-            if (note.id == eventData["payload"]["noteId"]) {
-              onClick(note);
+          for (Activity activity in activities) {
+            if (activity.id == eventData["payload"]["noteId"]) {
+              onClick(activity);
               break;
             }
           }

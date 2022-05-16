@@ -2,24 +2,31 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
 import 'package:remind_me/ui/models/activity.dart';
+import 'package:remind_me/ui/screens/edit_activity_base_scaffold.dart';
 
 import '../../services/date_service.dart';
-import '../../services/notification_service.dart';
+import '../../managers/notification_manager.dart';
 import '../../util/color_constants.dart';
+import '../dialogs/pick_color_dialog.dart';
 import '../models/event.dart';
 import '../models/note.dart';
 import '../models/reminder.dart';
 
 class EditEventBottomSheet {
-  static Future<Event?> showBottomSheet(
-      BuildContext context, Event? event, DateTime? date) async {
+  static Future<Event?> showBottomSheet(BuildContext context, Event? event,
+      DateTime? date, Function()? onDeleteEvent) async {
     int? timestamp;
     if (date != null) {
       TimeOfDay initialTime = TimeOfDay.now();
       TimeOfDay? pickedTime = await showTimePicker(
-        context: context,
-        initialTime: initialTime,
-      );
+          context: context,
+          initialTime: initialTime,
+          builder: (context, child) => DateService.getDatePickerTheme(
+              context,
+              child,
+              event != null
+                  ? event.getDarkColor()
+                  : Activity.getColorFromColorOption(ColorOptions.brown)));
       if (pickedTime != null) {
         DateTime pickedDateTime = DateTime(date.year, date.month, date.day,
             pickedTime.hour, pickedTime.minute);
@@ -28,7 +35,11 @@ class EditEventBottomSheet {
         final editedEvent = await showMaterialModalBottomSheet<Event?>(
             context: context,
             builder: (_) {
-              return BottomSheet(event: event, timestamp: timestamp);
+              return BottomSheet(
+                event: event,
+                timestamp: timestamp,
+                onDeleteEvent: onDeleteEvent,
+              );
             });
         return editedEvent;
       }
@@ -36,7 +47,10 @@ class EditEventBottomSheet {
       final editedEvent = await showMaterialModalBottomSheet<Event?>(
           context: context,
           builder: (_) {
-            return BottomSheet(event: event);
+            return BottomSheet(
+              event: event,
+              onDeleteEvent: onDeleteEvent,
+            );
           });
       return editedEvent;
     }
@@ -46,8 +60,11 @@ class EditEventBottomSheet {
 class BottomSheet extends StatefulWidget {
   final Event? event;
   final int? timestamp;
+  final Function()? onDeleteEvent;
 
-  const BottomSheet({Key? key, this.event, this.timestamp}) : super(key: key);
+  const BottomSheet(
+      {Key? key, this.event, this.timestamp, required this.onDeleteEvent})
+      : super(key: key);
 
   @override
   State<BottomSheet> createState() => _BottomSheetState();
@@ -66,7 +83,6 @@ class _BottomSheetState extends State<BottomSheet> {
     _isNewEvent = widget.event == null;
     if (widget.event != null) {
       event = Event.copy(widget.event!);
-      // event = widget.event!;
       _titleController.text = event.title;
       _textController.text = event.text;
     } else {
@@ -91,6 +107,7 @@ class _BottomSheetState extends State<BottomSheet> {
   @override
   Widget build(BuildContext context) {
     return Container(
+      color: event.getDarkColor(),
       padding:
           EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: Column(
@@ -102,6 +119,14 @@ class _BottomSheetState extends State<BottomSheet> {
             child: Stack(
               children: [
                 Align(
+                    alignment: Alignment.centerLeft,
+                    child: IconButton(
+                        iconSize: 35,
+                        onPressed:
+                            _isNewEvent ? null : () => _onDeletePressed(event),
+                        icon: Icon(Icons.delete),
+                        color: Colors.red)),
+                Align(
                     alignment: Alignment.center,
                     child: Text(
                       _isNewEvent ? "New Event" : "Edit Event",
@@ -110,11 +135,33 @@ class _BottomSheetState extends State<BottomSheet> {
                     )),
                 Align(
                   alignment: Alignment.centerRight,
-                  child: IconButton(
-                      onPressed:
-                          event.reminders.isEmpty ? null : _onCheckPressed,
-                      icon: Icon(Icons.check),
-                      color: ColorConstants.sand),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      InkWell(
+                          onTap: () async {
+                            final color = await PickColorDialog.show(context, event.color);
+                            if (color != null) {
+                              setState(() {
+                                event.color = color;
+                              });
+                            }
+                          },
+                          child: Container(
+                              padding: EdgeInsets.all(6),
+                              width: 55,
+                              height: 55,
+                              child: Card(
+                                color: event.getColor(),
+                              ))),
+                      IconButton(
+                        iconSize: 40,
+                          onPressed:
+                              event.reminders.isEmpty ? null : _onCheckPressed,
+                          icon: Icon(Icons.check),
+                          color: Colors.green)
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -211,12 +258,20 @@ class _BottomSheetState extends State<BottomSheet> {
       lastDate: inAYear,
       initialDate: now,
       firstDate: now,
+        builder: (context, child) => DateService.getDatePickerTheme(
+            context,
+            child,
+            event.getDarkColor())
     );
     if (pickedDate != null) {
       TimeOfDay initialTime = TimeOfDay.now();
       TimeOfDay? pickedTime = await showTimePicker(
         context: context,
         initialTime: initialTime,
+          builder: (context, child) => DateService.getDatePickerTheme(
+            context,
+            child,
+            event.getDarkColor())
       );
       if (pickedTime != null) {
         DateTime pickedDateTime = DateTime(pickedDate.year, pickedDate.month,
@@ -242,6 +297,11 @@ class _BottomSheetState extends State<BottomSheet> {
     return "No time set";
   }
 
+  _onDeletePressed(Event event) {
+    widget.onDeleteEvent!();
+    Navigator.pop(context);
+  }
+
   _onCheckPressed() async {
     if (event.reminders.isEmpty) return;
     event.title = _titleController.text;
@@ -252,8 +312,8 @@ class _BottomSheetState extends State<BottomSheet> {
       event.title = "Untitled";
     }
 
-    await NotificationService.cancelReminders(event.reminders);
-    await NotificationService.setReminders(event);
+    await NotificationManager.cancelReminders(event.reminders);
+    await NotificationManager.setReminders(event);
     Navigator.pop(context, event);
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+import 'package:remind_me/managers/settings_manager.dart';
 
 class BackgroundContainer extends StatelessWidget {
   final Widget child;
@@ -8,9 +9,9 @@ class BackgroundContainer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-        decoration: const BoxDecoration(
+        decoration:  BoxDecoration(
           image: DecorationImage(
-            image: AssetImage("assets/images/background.jpg"),
+            image: AssetImage(SettingsManager().getCompanionBackgroundImage()),
             fit: BoxFit.cover,
           ),
         ),

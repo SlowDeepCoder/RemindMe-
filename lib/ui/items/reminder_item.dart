@@ -12,14 +12,14 @@ class ReminderItem extends StatefulWidget {
   final Reminder reminder;
   final bool showDate;
   final String dateString;
-  final Activity? activity;
-  final Function(Reminder reminder, Activity activity) onReminderClicked;
+  final Activity activity;
+  final Function(Activity activity) onActivityClicked;
   // final Function(Reminder reminder) onReminderRemoved;
   // final Function(Reminder reminder) onReminderChanged;
 
   const ReminderItem(this.reminder, this.showDate, this.dateString, this.activity,
       {required this.key,
-      required this.onReminderClicked,
+      required this.onActivityClicked,
       // required this.onReminderChanged,
       // required this.onReminderRemoved
       })
@@ -32,23 +32,22 @@ class ReminderItem extends StatefulWidget {
 class ReminderItemState extends State<ReminderItem> {
   @override
   Widget build(BuildContext context) {
-    final noteTitle = widget.activity != null ? widget.activity!.title : "";
+    final noteTitle = widget.activity.title;
     final isCompleted = widget.reminder.isCompleted;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Visibility(visible: widget.showDate, child: Text(widget.dateString)),
         Card(
-            color: isCompleted == null
-                ? ColorConstants.soil
-                : isCompleted
-                    ? ColorConstants.soil.withGreen(100).withOpacity(0.5)
-                    : ColorConstants.soil.withRed(100).withOpacity(0.5),
+            color: widget.activity.getDarkColor(),
+            // isCompleted == null
+            //     ? widget.activity?.getDarkColor()
+            //     : isCompleted
+            //         ? ColorConstants.soil.withGreen(100).withOpacity(0.5)
+            //         : ColorConstants.soil.withRed(100).withOpacity(0.5),
             child: InkWell(
                 onTap: () {
-                  if (widget.activity != null) {
-                    widget.onReminderClicked(widget.reminder, widget.activity!);
-                  }
+                    widget.onActivityClicked(widget.activity);
                 },
                 child: Container(
                     width: double.infinity,

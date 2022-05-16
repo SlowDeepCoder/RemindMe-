@@ -2,16 +2,40 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
 import 'package:remind_me/services/date_service.dart';
-import 'package:remind_me/services/notification_service.dart';
-import 'package:remind_me/ui/screens/edit_note_screen.dart';
+import 'package:remind_me/managers/notification_manager.dart';
+import 'package:remind_me/ui/dialogs/pick_color_dialog.dart';
 import 'package:remind_me/util/color_constants.dart';
 import 'package:weekday_selector/weekday_selector.dart';
+import '../dialogs/pick_multiple_dates_dialog.dart';
 import '../models/activity.dart';
 import '../models/checklist.dart';
 import '../models/note.dart';
 import '../models/reminder.dart';
 import '../widgets/containers/background_container.dart';
 import '../widgets/mole_image.dart';
+import 'edit_checklist_screen.dart';
+import 'edit_note_screen.dart';
+
+extension ColorBrightness on Color {
+  Color darken([double amount = .1]) {
+    assert(amount >= 0 && amount <= 1);
+
+    final hsl = HSLColor.fromColor(this);
+    final hslDark = hsl.withLightness((hsl.lightness - amount).clamp(0.0, 1.0));
+
+    return hslDark.toColor();
+  }
+
+  Color lighten([double amount = .1]) {
+    assert(amount >= 0 && amount <= 1);
+
+    final hsl = HSLColor.fromColor(this);
+    final hslLight =
+        hsl.withLightness((hsl.lightness + amount).clamp(0.0, 1.0));
+
+    return hslLight.toColor();
+  }
+}
 
 class EditActivityBaseScaffold extends StatefulWidget {
   static const double padding = 0;
@@ -21,18 +45,23 @@ class EditActivityBaseScaffold extends StatefulWidget {
   final ActivityType activityType;
   final bool isNewActivity;
   final Future<bool> Function() onAddActivity;
+  final Function() onColorChange;
+  final Function() onEdit;
 
   const EditActivityBaseScaffold(
       {Key? key,
-        required this.activity,
-        required this.activityType,
+      required this.activity,
+      required this.onEdit,
+      required this.onColorChange,
+      required this.activityType,
       required this.body,
       required this.isNewActivity,
       required this.onAddActivity})
       : super(key: key);
 
   @override
-  State<EditActivityBaseScaffold> createState() => EditActivityBaseScaffoldState();
+  State<EditActivityBaseScaffold> createState() =>
+      EditActivityBaseScaffoldState();
 }
 
 class EditActivityBaseScaffoldState extends State<EditActivityBaseScaffold> {
@@ -85,7 +114,11 @@ class EditActivityBaseScaffoldState extends State<EditActivityBaseScaffold> {
         child: Scaffold(
           appBar: AppBar(
             titleSpacing: 0,
+            backgroundColor: widget.activity.color == ColorOptions.brown
+                ? widget.activity.getColor()
+                : widget.activity.getColor().darken(0.2),
             title: TextField(
+              onChanged: (text) => widget.onEdit(),
               focusNode: _focusNode,
               keyboardType: TextInputType.text,
               autofocus: widget.isNewActivity && titleController.text == "",
@@ -113,7 +146,17 @@ class EditActivityBaseScaffoldState extends State<EditActivityBaseScaffold> {
             ),
             actions: <Widget>[
               InkWell(
-                  onTap: () {},
+                  onTap: () async {
+                    final color = await PickColorDialog.show(
+                        context, widget.activity.color);
+                    if (color != null) {
+                      widget.onEdit();
+                      setState(() {
+                        widget.activity.color = color;
+                        widget.onColorChange();
+                      });
+                    }
+                  },
                   child: Container(
                       padding: EdgeInsets.all(6),
                       width: 55,
@@ -140,13 +183,14 @@ class EditActivityBaseScaffoldState extends State<EditActivityBaseScaffold> {
                 ];
               }, onSelected: (value) {
                 if (value == 0) {
-                } else if (value == 1) {
-                }
+                } else if (value == 1) {}
               }),
             ],
           ),
           floatingActionButton: FloatingActionButton(
-            backgroundColor: ColorConstants.soil,
+            backgroundColor: widget.activity.color == ColorOptions.brown
+                ? widget.activity.getColor()
+                : widget.activity.getColor().darken(0.2),
             onPressed: () =>
                 _pageIndex == 0 ? widget.onAddActivity() : _addNewReminder(),
             child: Icon(_pageIndex == 0 ? Icons.check : Icons.add),
@@ -155,7 +199,9 @@ class EditActivityBaseScaffoldState extends State<EditActivityBaseScaffold> {
               FloatingActionButtonLocation.centerDocked,
           bottomNavigationBar: BottomNavigationBar(
             type: BottomNavigationBarType.fixed,
-            backgroundColor: ColorConstants.soil,
+            backgroundColor: widget.activity.color == ColorOptions.brown
+                ? widget.activity.getColor()
+                : widget.activity.getColor().darken(0.2),
             selectedItemColor: Colors.white,
             unselectedItemColor: Colors.brown.shade500,
             currentIndex: _pageIndex,
@@ -178,7 +224,10 @@ class EditActivityBaseScaffoldState extends State<EditActivityBaseScaffold> {
           body: BackgroundContainer(
               child: Stack(
             children: [
-              buildPageView(),
+              Container(
+                color: widget.activity.getDarkColor().withOpacity(0.5),
+                child: buildPageView(),
+              ),
               MoleImage(
                 key: _moleImageKey,
                 pages: 2,
@@ -204,19 +253,15 @@ class EditActivityBaseScaffoldState extends State<EditActivityBaseScaffold> {
         });
       },
       children: <Widget>[
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: <Widget>[
-            widget.body,
-          ],
-        ),
+        widget.body,
         ListView.builder(
             itemCount: visibleReminders.length,
             itemBuilder: (context, index) {
               final reminder = visibleReminders[index];
 
               return Padding(
-                  padding: const EdgeInsets.all(EditActivityBaseScaffold.padding),
+                  padding:
+                      const EdgeInsets.all(EditActivityBaseScaffold.padding),
                   child: InkWell(
                       onTap: () => _onReminderClicked(reminder),
                       child: SizedBox(
@@ -233,7 +278,7 @@ class EditActivityBaseScaffoldState extends State<EditActivityBaseScaffold> {
                               ))),
                               IconButton(
                                   onPressed: () {
-                                    NotificationService.sendTestReminder(
+                                    NotificationManager.sendTestReminder(
                                         reminder, widget.activity);
                                   },
                                   color: Colors.blueAccent,
@@ -244,6 +289,7 @@ class EditActivityBaseScaffoldState extends State<EditActivityBaseScaffold> {
                                     setState(() {
                                       widget.activity.reminders
                                           .remove(reminder);
+                                      widget.onEdit();
                                       // _removedReminders.add(reminder);
                                     });
                                   },
@@ -263,18 +309,19 @@ class EditActivityBaseScaffoldState extends State<EditActivityBaseScaffold> {
     showMaterialModalBottomSheet(
       context: context,
       builder: (_) => Container(
+          color: widget.activity.getDarkColor(),
           padding: const EdgeInsets.all(8),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               InkWell(
-                  onTap: () => _setReminder(null),
+                  onTap: () => _setOpenDateDialog(null),
                   child: const SizedBox(
                     height: 50,
                     child: Center(child: Text('Single Notification')),
                   )),
               InkWell(
-                  onTap: _addRecurringReminder,
+                  onTap: () => _setMultipleReminders(),
                   child: const SizedBox(
                     height: 50,
                     child: Center(child: Text('Multiple Notifications')),
@@ -297,28 +344,58 @@ class EditActivityBaseScaffoldState extends State<EditActivityBaseScaffold> {
   }
 
   _onReminderClicked(Reminder reminder) {
-    _setReminder(reminder);
+    _setOpenDateDialog(reminder);
   }
 
-  _setReminder(Reminder? reminder) async {
+  _setMultipleReminders() async {
     String? routeName;
-    if(widget.activity.runtimeType == Note) {
+    if (widget.activity.runtimeType == Note) {
       routeName = EditNoteScreen.routeName;
-    } else if(widget.activity.runtimeType == Checklist) {
-      routeName = EditNoteScreen.routeName;
+    } else if (widget.activity.runtimeType == Checklist) {
+      routeName = EditChecklistScreen.routeName;
     }
-    if(routeName != null) {
-      Navigator.of(context)
-        .popUntil(ModalRoute.withName(routeName));
+    if (routeName != null) {
+      Navigator.of(context).popUntil(ModalRoute.withName(routeName));
+    }
+    DateTime now = DateTime.now();
+    DateTime inAYear = DateTime(now.year + 1, now.month, now.day);
+    final pickedDates = await PickMultipleDatesDialog.show(context);
+    if (pickedDates != null) {
+      TimeOfDay initialTime = TimeOfDay.now();
+      TimeOfDay? pickedTime = await showTimePicker(
+        context: context,
+        initialTime: initialTime,
+      );
+      if (pickedTime != null) {
+        for (DateTime pickedDate in pickedDates) {
+          DateTime pickedDateTime = DateTime(pickedDate.year, pickedDate.month,
+              pickedDate.day, pickedTime.hour, pickedTime.minute);
+          _setReminder(null, pickedDateTime);
+        }
+        setState(() {});
+      }
+    }
+  }
+
+  _setOpenDateDialog(Reminder? reminder) async {
+    String? routeName;
+    if (widget.activity.runtimeType == Note) {
+      routeName = EditNoteScreen.routeName;
+    } else if (widget.activity.runtimeType == Checklist) {
+      routeName = EditChecklistScreen.routeName;
+    }
+    if (routeName != null) {
+      Navigator.of(context).popUntil(ModalRoute.withName(routeName));
     }
     DateTime now = DateTime.now();
     DateTime inAYear = DateTime(now.year + 1, now.month, now.day);
     DateTime? pickedDate = await showDatePicker(
-      context: context,
-      lastDate: inAYear,
-      initialDate: now,
-      firstDate: now,
-    );
+        context: context,
+        lastDate: inAYear,
+        initialDate: now,
+        firstDate: now,
+        builder: (context, child) => DateService.getDatePickerTheme(
+            context, child, widget.activity.getDarkColor()));
     if (pickedDate != null) {
       TimeOfDay initialTime = TimeOfDay.now();
       TimeOfDay? pickedTime = await showTimePicker(
@@ -329,17 +406,21 @@ class EditActivityBaseScaffoldState extends State<EditActivityBaseScaffold> {
         DateTime pickedDateTime = DateTime(pickedDate.year, pickedDate.month,
             pickedDate.day, pickedTime.hour, pickedTime.minute);
         setState(() {
-          if (reminder == null) {
-            final newReinder = Reminder.create(widget.activity.id,
-                widget.activityType, pickedDateTime.millisecondsSinceEpoch);
-            widget.activity.addReminder(newReinder);
-          } else {
-            reminder.timestamp = pickedDateTime.millisecondsSinceEpoch;
-          }
-          // _newReminders.add(reminder);
+          _setReminder(reminder, pickedDateTime);
         });
       }
     }
+  }
+
+  void _setReminder(Reminder? reminder, DateTime pickedDateTime) {
+    if (reminder == null) {
+      final newReinder = Reminder.create(widget.activity.id,
+          widget.activityType, pickedDateTime.millisecondsSinceEpoch);
+      widget.activity.addReminder(newReinder);
+    } else {
+      reminder.timestamp = pickedDateTime.millisecondsSinceEpoch;
+    }
+    widget.onEdit();
   }
 
   _addRecurringReminder() async {

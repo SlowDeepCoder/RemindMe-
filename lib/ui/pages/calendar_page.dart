@@ -3,6 +3,7 @@ import 'dart:collection';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:remind_me/managers/settings_manager.dart';
 import 'package:remind_me/ui/bottom_sheets/edit_event_bottom_sheet.dart';
 import 'package:remind_me/util/color_constants.dart';
 import 'package:table_calendar/table_calendar.dart';
@@ -18,9 +19,9 @@ import '../models/reminder.dart';
 class CalendarPage extends StatefulWidget {
   final List<Note> notes;
   final List<Checklist> checklists;
-  final List<Event> events;
   final List<Reminder> reminders;
-  final Function(Reminder reminder, Activity activity) onReminderClicked;
+  final List<Event> events;
+  final Function(Activity activity) onActivityClicked;
   final Function(DateTime? selectedDay) onAddNewEvent;
 
   const CalendarPage(
@@ -28,7 +29,7 @@ class CalendarPage extends StatefulWidget {
       required this.notes,
       required this.events,
       required this.onAddNewEvent,
-      required this.onReminderClicked,
+      required this.onActivityClicked,
         required this.checklists,
       required this.reminders})
       : super(key: key);
@@ -38,7 +39,8 @@ class CalendarPage extends StatefulWidget {
 }
 
 class CalendarPageState extends State<CalendarPage> {
-  CalendarFormat _calendarFormat = CalendarFormat.month;
+  // CalendarFormat _calendarFormat = CalendarFormat.month;
+  final settingsManager = SettingsManager();
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
   late final ValueNotifier<List<Reminder>> _selectedReminders;
@@ -73,6 +75,7 @@ class CalendarPageState extends State<CalendarPage> {
                 style: TextStyle(color: ColorConstants.sand),
               ),
             );
+
           },
           dowBuilder: (context, day) {
             final text = DateFormat.E().format(day);
@@ -83,11 +86,29 @@ class CalendarPageState extends State<CalendarPage> {
               ),
             );
           },
+            singleMarkerBuilder: (context, calendarDay, reminder) {
+              reminder = reminder as Reminder;
+              final activity = Activity.getActivity(
+                  [widget.notes, widget.events, widget.checklists], reminder.activityId);
+            return Align(
+              alignment: Alignment.bottomCenter,
+              child: Container(
+                margin: EdgeInsets.all(1),
+                width: 7,
+                height: 7,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: activity != null ? activity.getDarkColor() : ColorConstants.soil,
+                ),
+              ),
+            );
+
+          }
         ),
         firstDay: kFirstDay,
         lastDay: kLastDay,
         focusedDay: _focusedDay,
-        calendarFormat: _calendarFormat,
+        calendarFormat: settingsManager.calendarFormat,
         eventLoader: (day) {
           return _getRemindersForTheDay(day);
         },
@@ -101,7 +122,6 @@ class CalendarPageState extends State<CalendarPage> {
         },
         onDaySelected: (selectedDay, focusedDay) {
           if (!isSameDay(_selectedDay, selectedDay)) {
-            // Call `setState()` when updating the selected day
             setState(() {
               _selectedDay = selectedDay;
               _focusedDay = focusedDay;
@@ -110,15 +130,13 @@ class CalendarPageState extends State<CalendarPage> {
           _selectedReminders.value = _getRemindersForTheDay(_selectedDay);
         },
         onFormatChanged: (format) {
-          if (_calendarFormat != format) {
-            // Call `setState()` when updating calendar format
+          if (settingsManager.calendarFormat != format) {
             setState(() {
-              _calendarFormat = format;
+              settingsManager.calendarFormat = format;
             });
           }
         },
         onPageChanged: (focusedDay) {
-          // No need to call `setState()` here
           _focusedDay = focusedDay;
         },
       ),
@@ -131,21 +149,19 @@ class CalendarPageState extends State<CalendarPage> {
               itemCount: reminders.length,
               itemBuilder: (context, index) {
                 final reminder = reminders[index];
-                // final note = Note.getNote(
-                //     activity.isNote ? widget.notes : widget.events,
-                //     activity.noteId);
                 final activity = Activity.getActivity(
-                    [widget.notes, widget.events], reminder.activityId);
+                    [widget.notes, widget.events, widget.checklists], reminder.activityId);
 
                 final date =
                     DateTime.fromMillisecondsSinceEpoch(reminder.timestamp);
                 final dateString = DateFormat('dd MMM').format(date);
+                if(activity == null) return Container();
                 return ReminderItem(
                   reminder,
                   false,
                   dateString,
                   activity,
-                  onReminderClicked: widget.onReminderClicked,
+                  onActivityClicked: widget.onActivityClicked,
                   // onReminderRemoved: widget.onRemoveReminder,
                   key: GlobalKey<ReminderItemState>(),
                   // onReminderChanged: (activity) {
@@ -177,6 +193,7 @@ class CalendarPageState extends State<CalendarPage> {
   }
 
   void update() {
+    _selectedReminders.value = _getRemindersForTheDay(_selectedDay);
     setState(() {});
   }
 

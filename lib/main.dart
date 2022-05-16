@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:remind_me/services/screen_manager.dart';
+import 'package:remind_me/managers/screen_manager.dart';
 import 'package:remind_me/ui/models/checklist.dart';
 import 'package:remind_me/ui/models/note.dart';
 import 'package:remind_me/ui/screens/edit_checklist_screen.dart';
@@ -7,25 +7,40 @@ import 'package:remind_me/ui/screens/home_screen.dart';
 import 'package:remind_me/ui/screens/edit_note_screen.dart';
 import 'package:remind_me/util/color_constants.dart';
 
+import 'managers/settings_manager.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const MyApp());
+  final settingsManager = SettingsManager();
+  await settingsManager.loadSettings();
+  final GlobalKey<MyAppState> _myAppGlobalKey = GlobalKey();
+  settingsManager.setKey(_myAppGlobalKey);
+  runApp(MyApp(
+    key: _myAppGlobalKey,
+  ));
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+class MyApp extends StatefulWidget {
+  MyApp({Key? key}) : super(key: key);
 
-  // This widget is the root of your application.
+  @override
+  State<MyApp> createState() => MyAppState();
+}
+
+class MyAppState extends State<MyApp> {
+  final settingsManager = SettingsManager();
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       builder: (context, child) {
         _setScreenDimensions(context);
         if (child != null) {
-          return MediaQuery(
-              data:
-                  MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
-              child: child);
+          return child;
+          // return MediaQuery(
+          //     data:
+          //         MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
+          //     child: child);
         } else {
           return Container();
         }
@@ -34,13 +49,13 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
           fontFamily: "OpenSans",
           colorScheme: ColorScheme.fromSwatch().copyWith(
-              primary: ColorConstants.soil,
+              primary: settingsManager.getCompanionMainColor(),
               brightness: Brightness.light,
-              onPrimary: Colors.white,
-              onSecondary: Colors.white),
+              onPrimary: settingsManager.getCompanionTextColor(),
+              onSecondary: settingsManager.getCompanionTextColor()),
           elevatedButtonTheme: ElevatedButtonThemeData(
             style: ElevatedButton.styleFrom(
-              primary: ColorConstants.soil, // Button color
+              primary: settingsManager.getCompanionMainColor(), // Button color
               onPrimary: ColorConstants.sand, // Text color
             ),
           ),
@@ -48,8 +63,8 @@ class MyApp extends StatelessWidget {
             bodyText1: TextStyle(),
             bodyText2: TextStyle(),
           ).apply(
-            bodyColor: ColorConstants.sand,
-            decorationColor: ColorConstants.sand,
+            bodyColor: settingsManager.getCompanionTextColor(),
+            decorationColor: settingsManager.getCompanionTextColor(),
           ),
           cardTheme: CardTheme(
               elevation: 10,
@@ -69,7 +84,8 @@ class MyApp extends StatelessWidget {
         EditNoteScreen.routeName: (context) => EditNoteScreen(
             note: ModalRoute.of(context)!.settings.arguments as Note?),
         EditChecklistScreen.routeName: (context) => EditChecklistScreen(
-            checklist: ModalRoute.of(context)!.settings.arguments as Checklist?),
+            checklist:
+                ModalRoute.of(context)!.settings.arguments as Checklist?),
       },
     );
   }
@@ -80,5 +96,9 @@ class MyApp extends StatelessWidget {
     final screenHeight = size.height;
     ScreenManager().setScreenWidth(screenWidth);
     ScreenManager().setScreenHeight(screenHeight);
+  }
+
+  update() {
+    setState(() {});
   }
 }

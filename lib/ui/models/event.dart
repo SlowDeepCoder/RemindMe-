@@ -8,7 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'activity.dart';
 import '../../services/date_service.dart';
-import '../../services/notification_service.dart';
+import '../../managers/notification_manager.dart';
 
 
 class Event extends Activity {

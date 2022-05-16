@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:remind_me/ui/models/note.dart';
 import 'package:remind_me/ui/pages/calendar_page.dart';
 import 'package:remind_me/util/color_constants.dart';
+import '../../managers/settings_manager.dart';
 import '../models/activity.dart';
 import '../bottom_sheets/edit_event_bottom_sheet.dart';
 import '../models/checklist.dart';
@@ -21,10 +22,10 @@ class HomeScreen extends StatefulWidget {
   static const String routeName = "/";
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  State<HomeScreen> createState() => HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class HomeScreenState extends State<HomeScreen> {
   final List<Note> _notes = [];
   final List<Checklist> _checklists = [];
   final List<Event> _events = [];
@@ -36,6 +37,8 @@ class _HomeScreenState extends State<HomeScreen> {
   final _statisticsPageKey = GlobalKey<SettingsPageState>();
   final _moleImageKey = GlobalKey<MoleImageState>();
 
+  bool _renderScreen = false;
+
   AppBar _appBar = AppBar();
 
   int _pageIndex = 0;
@@ -45,6 +48,7 @@ class _HomeScreenState extends State<HomeScreen> {
   );
 
   Widget buildPageView() {
+    final activities = Activity.getActivities([_notes, _checklists]);
     return PageView(
       controller: _pageController,
       onPageChanged: (index) {
@@ -62,13 +66,28 @@ class _HomeScreenState extends State<HomeScreen> {
           },
           notes: _notes,
           checklists: _checklists,
+          // activities: activities,
           key: _notesPageKey,
-          onNotesChange: (List<Note> notes) {
-            _notes.clear();
-            _notes.addAll(notes);
-            _saveNotes();
+          // onNotesChange: (List<Note> notes) {
+          //   _notes.clear();
+          //   _notes.addAll(notes);
+          //   _saveNotes();
+          // },
+          onActivityClicked: _onActivityClicked,
+          onDeleteActivities: (List<Activity> activities) {
+            for(Activity activity in activities){
+              if(activity.runtimeType == Note){
+                final note  = Note.getNote(_notes, activity.id);
+                _notes.remove(note);
+                _saveNotes();
+              }
+             else  if(activity.runtimeType == Checklist){
+                final checklist  = Checklist.getChecklist(_checklists, activity.id);
+                _checklists.remove(checklist);
+                _saveChecklists();
+              }
+            }
           },
-          onNoteClicked: (note) => _openNote(note),
         ),
         RemindersPage(
           key: _activitiesPageKey,
@@ -76,7 +95,7 @@ class _HomeScreenState extends State<HomeScreen> {
           checklists: _checklists,
           events: _events,
           reminders: _reminders,
-          onReminderClicked: _onReminderClicked,
+          onReminderClicked: _onActivityClicked,
           // onRemoveReminder: _removeSavedActivity,
         ),
         CalendarPage(
@@ -86,10 +105,10 @@ class _HomeScreenState extends State<HomeScreen> {
           events: _events,
           reminders: _reminders,
           // onRemoveReminder: _removeSavedActivity,
-          onReminderClicked: _onReminderClicked,
+          onActivityClicked: _onActivityClicked,
           onAddNewEvent: _addNewEvent,
         ),
-        SettingsPage(key: _statisticsPageKey),
+        SettingsPage(key: _statisticsPageKey, onCompanionChanged: update),
       ],
     );
   }
@@ -136,20 +155,32 @@ class _HomeScreenState extends State<HomeScreen> {
         if (_notesPageKey.currentState != null) {
           _appBar = _notesPageKey.currentState!.getAppBar(getStandardAppbar());
         }
+        else {
+          _appBar = getStandardAppbar();
+        }
         break;
       case 1:
         if (_activitiesPageKey.currentState != null) {
           _appBar = _activitiesPageKey.currentState!.getAppBar(getStandardAppbar());
+        }
+        else {
+          _appBar = getStandardAppbar();
         }
         break;
       case 2:
         if (_calendarPageKey.currentState != null) {
           _appBar = _calendarPageKey.currentState!.getAppBar(getStandardAppbar());
         }
+        else {
+          _appBar = getStandardAppbar();
+        }
         break;
       case 3:
         if (_statisticsPageKey.currentState != null) {
           _appBar = _statisticsPageKey.currentState!.getAppBar(getStandardAppbar());
+        }
+        else {
+          _appBar = getStandardAppbar();
         }
     }
   }
@@ -165,9 +196,12 @@ class _HomeScreenState extends State<HomeScreen> {
     await _loadEvents();
     await _loadChecklists();
     await _loadReminders();
-    _updateAppBar();
     _pageController.addListener(() {
       _moleImageKey.currentState?.setMoleOffset(_pageController.offset);
+    });
+    setState(() {
+      _renderScreen = true;
+      _updateAppBar();
     });
   }
 
@@ -179,13 +213,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if(!_renderScreen) return Container();
     return WillPopScope(
         onWillPop: _onBackPressed,
         child: Scaffold(
             appBar: _appBar,
             bottomNavigationBar: BottomNavigationBar(
               type: BottomNavigationBarType.fixed,
-              backgroundColor: ColorConstants.soil,
+              backgroundColor: SettingsManager().getCompanionMainColor(),
               selectedItemColor: Colors.white,
               unselectedItemColor: Colors.brown.shade500,
               currentIndex: _pageIndex,
@@ -211,7 +246,9 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
             body: BackgroundContainer(
-              child: Stack(
+              child: Container(
+                  color:ColorConstants.soil.withOpacity(0.5),
+                  child:  Stack(
                 children: [
                   buildPageView(),
                   MoleImage(
@@ -219,7 +256,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     pages: 4,
                   )
                 ],
-              ),
+              )),
             )));
   }
 
@@ -247,15 +284,15 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
 
-  _onReminderClicked(Reminder reminder, Activity activity) {
-    switch(reminder.activityType){
-      case ActivityType.note:
+  _onActivityClicked(Activity activity) {
+    switch(activity.runtimeType){
+      case Note:
         _openNote(activity as Note);
         break;
-      case ActivityType.event:
+      case Event:
         _openEvent(activity as Event);
         break;
-      case ActivityType.checklist:
+      case Checklist:
         _openChecklist(activity as Checklist);
         break;
     }
@@ -301,6 +338,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (checklist != null) {
       _checklists.add(checklist);
       _saveChecklists();
+
     }
   }
 
@@ -326,7 +364,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   _addNewEvent(DateTime? date) async {
     final event =
-    await EditEventBottomSheet.showBottomSheet(context, null, date);
+    await EditEventBottomSheet.showBottomSheet(context, null, date, null);
 
     if (event != null) {
       _events.add(event);
@@ -338,7 +376,7 @@ class _HomeScreenState extends State<HomeScreen> {
   _openEvent(Event event) async {
     Navigator.of(context).popUntil(ModalRoute.withName(HomeScreen.routeName));
     Event? editedEvent =
-    await EditEventBottomSheet.showBottomSheet(context, event, null);
+    await EditEventBottomSheet.showBottomSheet(context, event, null, () => _onDeleteEvent(event));
 
 
 
@@ -375,8 +413,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   _updateCurrentPage() {
     if (_pageIndex == 0) {
-      _notesPageKey.currentState?.setNotes(_notes);
-      _notesPageKey.currentState?.sortNotes(SortOptions.created);
+      _notesPageKey.currentState?.update();
     } else if (_pageIndex == 1) {
       _activitiesPageKey.currentState?.update();
     } else if (_pageIndex == 2) {
@@ -385,11 +422,23 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<bool> _onBackPressed() async {
-    if (_notesPageKey.currentState!.selectedNotes.isEmpty) {
+    if (_notesPageKey.currentState!.selectedActivities.isEmpty) {
       return true;
     } else {
       _notesPageKey.currentState!.clearSelectedNotes();
       return false;
     }
+  }
+
+  _onDeleteEvent(Event event) {
+    print("hej");
+    _events.remove(event);
+    _saveEvents();
+  }
+
+  void update() {
+    setState(() {
+      print("hej");
+    });
   }
 }

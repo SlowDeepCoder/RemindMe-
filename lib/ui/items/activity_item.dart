@@ -3,31 +3,32 @@ import 'package:flutter/material.dart';
 import 'package:remind_me/util/color_constants.dart';
 import 'package:simple_moment/simple_moment.dart';
 
+import '../models/activity.dart';
 import '../models/note.dart';
 
-class NoteItem extends StatefulWidget {
+class ActivityItem extends StatefulWidget {
   final Key key;
-  final Note note;
+  final Activity activity;
   final ValueChanged<bool> isSelected;
-  final VoidCallback onClick;
+  final Function(Activity activity) onClick;
 
-  const NoteItem(this.note, this.isSelected, this.onClick, this.key)
+  const ActivityItem(this.activity, this.isSelected, this.onClick, this.key)
       : super(key: key);
 
   @override
-  State<NoteItem> createState() => NoteItemState();
+  State<ActivityItem> createState() => ActivityItemState();
 }
 
-class NoteItemState extends State<NoteItem> {
+class ActivityItemState extends State<ActivityItem> {
   bool _isSelected = false;
 
   @override
   Widget build(BuildContext context) {
     return Card(
         // color: _isSelected ? ColorConstants.mole : ColorConstants.soil,
-        color: _isSelected ? ColorConstants.mole : widget.note.getColor(),
+        color: _isSelected ? ColorConstants.mole : widget.activity.getDarkColor(),
         child: InkWell(
-            onTap: widget.onClick,
+            onTap: () => widget.onClick(widget.activity),
             onLongPress: selectItem,
             child: Container(
                 // height: 50,
@@ -38,12 +39,13 @@ class NoteItemState extends State<NoteItem> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        widget.note.title,
+                        widget.activity.title,
                         textAlign: TextAlign.start,
                         style: const TextStyle(
                             fontSize: 20, fontWeight: FontWeight.bold),
                       ),
-                      Text("Updated: " + Moment.fromMillisecondsSinceEpoch(widget.note.updatedAt).fromNow(true) + " ago", style: TextStyle(fontSize: 12),),
+                      Text(widget.activity.runtimeType.toString()),
+                      Text("Updated: " + Moment.fromMillisecondsSinceEpoch(widget.activity.updatedAt).fromNow(true) + " ago", style: TextStyle(fontSize: 12),),
                     ],
                   ),
                 ))));

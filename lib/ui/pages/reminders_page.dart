@@ -16,7 +16,7 @@ class RemindersPage extends StatefulWidget {
   final List<Checklist> checklists;
   final List<Event> events;
   final List<Reminder> reminders;
-  final Function(Reminder reminder, Activity activity) onReminderClicked;
+  final Function(Activity activity) onReminderClicked;
 
   const RemindersPage({required this.notes,
     required this.events,
@@ -77,18 +77,17 @@ class RemindersPageState extends State<RemindersPage> {
           final dateString = DateFormat('dd MMM').format(date);
           bool showDate = !dateStrings.contains(dateString);
           if (showDate) {
-            dateStrings.add(dateString);
+              dateStrings.add(dateString);
           }
-          // final note = Note.getNote(activity.isNote ? widget.notes : widget.events, activity.noteId);
           final activity = Activity.getActivity(
-              [widget.notes, widget.events], reminder.activityId);
-          // (activity.isNote ? widget.notes : widget.events, activity.noteId);
+              [widget.notes, widget.events, widget.checklists], reminder.activityId);
+          if(activity == null) return Container();
           return ReminderItem(
             reminder,
             showDate,
             dateString,
             activity,
-            onReminderClicked: widget.onReminderClicked,
+            onActivityClicked: widget.onReminderClicked,
             key: GlobalKey<ReminderItemState>(),
           );
         });

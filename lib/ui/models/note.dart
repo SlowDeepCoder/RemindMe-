@@ -8,9 +8,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'activity.dart';
 import '../../services/date_service.dart';
-import '../../services/notification_service.dart';
+import '../../managers/notification_manager.dart';
 
-enum SortOptions { created, updated }
+enum SortOptions { created, updated, titleAcending, titleDecending, color }
 
 class Note extends Activity {
   late String text;
@@ -66,13 +66,13 @@ class Note extends Activity {
     }
     // decodedReminders.isEmpty ? [] : decodedReminders as List<Reminder>;
     return Note(
-        parsedJson["id"],
-        parsedJson["createdAt"],
-        parsedJson["updatedAt"],
-        parsedJson["title"],
+      parsedJson["id"],
+      parsedJson["createdAt"],
+      parsedJson["updatedAt"],
+      parsedJson["title"],
       parsedJson["text"],
       reminders,
-        ColorOptions.values.byName(parsedJson["color"]),
+      ColorOptions.values.byName(parsedJson["color"]),
     );
   }
 

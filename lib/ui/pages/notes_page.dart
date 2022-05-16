@@ -1,24 +1,32 @@
-import 'package:awesome_notifications/awesome_notifications.dart';
+import 'package:auto_animated/auto_animated.dart';
 import 'package:flutter/material.dart';
-import 'package:remind_me/ui/items/note_item.dart';
+import 'package:remind_me/ui/items/activity_item.dart';
 import 'package:remind_me/ui/models/checklist.dart';
 import 'package:remind_me/ui/models/note.dart';
-import '../../services/notification_service.dart';
+import 'package:remind_me/util/color_constants.dart';
+import '../../managers/notification_manager.dart';
+import '../../managers/settings_manager.dart';
+import '../dialogs/sort_option_dialog.dart';
+import '../models/activity.dart';
 import '../screens/edit_note_screen.dart';
 
 class NotesPage extends StatefulWidget {
   final VoidCallback onSelectionChange;
-  final Function(List<Note> notes) onNotesChange;
-  final Function(Note note) onNoteClicked;
+  final Function(Activity activity) onActivityClicked;
+  final Function(List<Activity> activity) onDeleteActivities;
+
   final List<Note> notes;
   final List<Checklist> checklists;
 
+  // final List<Activity> activities;
+
   const NotesPage({
     required this.onSelectionChange,
-    required this.onNotesChange,
-    required this.onNoteClicked,
+    required this.onActivityClicked,
+    required this.onDeleteActivities,
     required this.notes,
     required this.checklists,
+    // required this.activities,
     Key? key,
   }) : super(key: key);
 
@@ -27,10 +35,13 @@ class NotesPage extends StatefulWidget {
 }
 
 class NotesPageState extends State<NotesPage> {
-  List<Note> _notes = [];
-  final List<Note> selectedNotes = [];
-  final List<NoteItem> _noteItems = [];
-  final List<GlobalKey<NoteItemState>> _noteItemKeys = [];
+  final List<Activity> selectedActivities = [];
+  final List<ActivityItem> _activityItems = [];
+  final List<GlobalKey<ActivityItemState>> _activityItemKeys = [];
+
+  // GlobalKey<AnimatedListState> _animatedListviewKey = GlobalKey();
+  final settingsManager = SettingsManager();
+  late List<Activity> _activities;
 
   @override
   void initState() {
@@ -39,89 +50,206 @@ class NotesPageState extends State<NotesPage> {
   }
 
   _init() async {
-    _notes = widget.notes;
+    _activities = Activity.getActivities([widget.notes, widget.checklists]);
+    _sortActivities();
     await _initNotifications();
-    sortNotes(SortOptions.created);
   }
 
   _initNotifications() async {
-    await NotificationService().initNotifications();
-    NotificationService().setNotificationListeners(_notes, _onNoteClicked);
+    await NotificationManager().initNotifications();
+    NotificationManager()
+        .setNotificationListeners(_activities, _onActivityClicked);
   }
 
   @override
   Widget build(BuildContext context) {
-    return ListView.builder(
-        itemCount: _noteItems.length,
-        itemBuilder: (context, index) {
-          return _noteItems[index];
-        });
+    return Stack(
+      children: [
+        InkWell(
+          onTap: () async {
+            final sortOption = await SortOptionDialog.show(
+                context, settingsManager.sortOption);
+            if (sortOption != null) {
+              setState(() {
+                settingsManager.sortOption = sortOption;
+              });
+              _sortActivities();
+            }
+          },
+          child: Container(
+            margin: EdgeInsets.all(4),
+            height: 32,
+            color: settingsManager.getCompanionMainColor(),
+            child: Center(
+              child: Text(
+                "Sort by : " + Activity.getNameFromSortOption(settingsManager.sortOption),
+                style: TextStyle(fontSize: 18),
+              ),
+            ),
+          ),
+        ),
+        Padding(
+            padding: EdgeInsets.only(top: 36),
+            child:
+                // AnimatedList(
+                //     key: _animatedListviewKey,
+                //     initialItemCount: _activityItems.length,
+                //     itemBuilder: (context, index, animation) {
+                //       return FadeTransition(
+                //         opacity: Tween<double>(
+                //           begin: 0,
+                //           end: 1,
+                //         ).animate(animation),
+                //         // And slide transition
+                //         child: SlideTransition(
+                //           position: Tween<Offset>(
+                //             begin: Offset(0, -0.1),
+                //             end: Offset.zero,
+                //           ).animate(animation),
+                //           // Paste you Widget
+                //           child: _activityItems[index],
+                //         ),
+                //       );
+                //     }),
+
+                // LiveList.options(
+                //   key: _animatedListviewKey,
+                //     itemCount: _activityItems.length,
+                //     options: const LiveOptions(
+                //       // Start animation after (default zero)
+                //       // delay: Duration(milliseconds: 100),
+                //
+                //       // Show each item through (default 250)
+                //       showItemInterval: Duration(milliseconds: 50),
+                //
+                //       // Animation duration (default 250)
+                //       showItemDuration: Duration(seconds: 1),
+                //
+                //       // Animations starts at 0.05 visible
+                //       // item fraction in sight (default 0.025)
+                //       visibleFraction: 0.05,
+                //
+                //       // Repeat the animation of the appearance
+                //       // when scrolling in the opposite direction (default false)
+                //       // To get the effect as in a showcase for ListView, set true
+                //       reAnimateOnVisibility: false,
+                //     ),
+                //     itemBuilder: (context, index, animation) {
+                //       return FadeTransition(
+                //         opacity: Tween<double>(
+                //           begin: 0,
+                //           end: 1,
+                //         ).animate(animation),
+                //         // And slide transition
+                //         child: SlideTransition(
+                //           position: Tween<Offset>(
+                //             begin: Offset(0, -0.1),
+                //             end: Offset.zero,
+                //           ).animate(animation),
+                //           // Paste you Widget
+                //           child: _activityItems[index],
+                //         ),
+                //       );
+                //     }),
+                  ListView.builder(
+                      itemCount: _activityItems.length,
+                      itemBuilder: (context, index) {
+                        return _activityItems[index];
+                      })
+
+            //     ReorderableListView(
+            //   onReorder: (int oldIndex, int newIndex) {},
+            //   children: _activityItems,
+            // )
+    )
+      ],
+    );
   }
 
-  deleteSelectedNotes() {
-    for (Note selectedNote in selectedNotes) {
-      _notes.remove(selectedNote);
-    }
-    selectedNotes.clear();
+  // GlobalKey<State<StatefulWidget>> getKeyFromActivityItem(ActivityItem activityItem) {
+  //   for (int i = 0; i < _activityItems.length; i++) {
+  //     if (_activityItems[i] == activityItem)
+  //       return _activityItemKeys[i];
+  //   }
+  //   return GlobalKey(activityItem.activity.id);
+  // }
+
+  _deleteSelectedNotes() {
+    // for (Activity selectedActivity in selectedActivities) {
+    //   widget.activities.remove(selectedActivity);
+    // }
+    widget.onDeleteActivities(selectedActivities);
+    selectedActivities.clear();
+    widget.onSelectionChange();
     _updateListView();
-    widget.onNotesChange(_notes);
   }
 
   clearSelectedNotes() {
-    for (int i = 0; i < _noteItemKeys.length; i++) {
-      _noteItemKeys[i].currentState?.unselectItem();
+    for (int i = 0; i < _activityItemKeys.length; i++) {
+      _activityItemKeys[i].currentState?.unselectItem();
     }
     setState(() {
-      selectedNotes.clear();
+      selectedActivities.clear();
     });
     widget.onSelectionChange();
   }
 
-  _onNoteClicked(Note note) async {
-    widget.onNoteClicked(note);
+  _onActivityClicked(Activity activity) async {
+    widget.onActivityClicked(activity);
   }
 
-  setNotes(List<Note> notes) {
-    _notes = notes;
-  }
+// setNotes(List<Note> notes) {
+//   _notes = notes;
+// }
 
-  sortNotes(SortOptions sortOption) {
-    _notes = Note.sortNotes(_notes, sortOption, true);
+  _sortActivities() {
+    print(_activities.length);
+    // final activities =
+        Activity.sortActivities(_activities, settingsManager.sortOption);
+    print(_activities.length);
+    // _activities.clear();
+    // _activities.addAll(activities);
+    print(_activities.length);
     _updateListView();
   }
 
-  void _updateListView() {
-    _noteItemKeys.clear();
-    _noteItems.clear();
-    for (int i = 0; i < _notes.length; i++) {
-      _noteItemKeys.add(GlobalKey<NoteItemState>());
-      _noteItems.add(NoteItem(
-        _notes[i],
+  void _updateListView() async {
+    _activityItemKeys.clear();
+    _activityItems.clear();
+
+    for (int i = 0; i < _activities.length; i++) {
+      _activityItemKeys.add(GlobalKey<ActivityItemState>());
+      _activityItems.add(ActivityItem(
+        _activities[i],
         (bool value) {
           setState(() {
             if (value) {
-              selectedNotes.add(_notes[i]);
+              selectedActivities.add(_activities[i]);
             } else {
-              selectedNotes.remove(_notes[i]);
+              selectedActivities.remove(_activities[i]);
             }
             widget.onSelectionChange();
           });
         },
-        () => selectedNotes.isEmpty
-            ? _onNoteClicked(_notes[i])
+        (activity) => selectedActivities.isEmpty
+            ? _onActivityClicked(activity)
             : _onNoteSelected(i),
-        _noteItemKeys[i],
+        _activityItemKeys[i],
       ));
     }
-    setState(() {});
+    setState(() {
+      // _animatedListviewKey = GlobalKey();
+    });
+    // setState(() {
+    // });
   }
 
   _onNoteSelected(int i) {
-    _noteItemKeys[i].currentState?.selectItem();
+    _activityItemKeys[i].currentState?.selectItem();
   }
 
   AppBar getAppBar(AppBar standardAppBar) {
-    return selectedNotes.isEmpty
+    return selectedActivities.isEmpty
         ? standardAppBar
         : AppBar(
             title: const Text("Mole Planner"),
@@ -130,9 +258,16 @@ class NotesPageState extends State<NotesPage> {
                   onPressed: () => clearSelectedNotes(),
                   icon: Icon(Icons.highlight_remove)),
               IconButton(
-                  onPressed: () => deleteSelectedNotes(),
+                  onPressed: () => _deleteSelectedNotes(),
                   icon: Icon(Icons.delete))
             ],
           );
+  }
+
+  void update() {
+    setState(() {
+      _activities = Activity.getActivities([widget.notes, widget.checklists]);
+      _sortActivities();
+    });
   }
 }

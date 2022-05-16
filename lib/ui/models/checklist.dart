@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:convert';
 
 import 'package:remind_me/ui/models/activity.dart';
@@ -6,8 +7,29 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../services/date_service.dart';
 
+class ChecklistItem {
+  late String text;
+  late bool isChecked;
+
+  ChecklistItem(this.text, this.isChecked);
+
+
+  factory ChecklistItem.fromJson(Map<String, dynamic> parsedJson) {
+    return ChecklistItem(
+        parsedJson["text"],
+        parsedJson["isChecked"]);
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      "text": text,
+      "isChecked": isChecked,
+    };
+  }
+}
+
 class Checklist extends Activity {
-  late final List<Map<String, bool>> checklist;
+  late final List<ChecklistItem> checklist;
 
   Checklist.create() {
     id = generateId();
@@ -35,49 +57,50 @@ class Checklist extends Activity {
     final decodedReminders = json.decode(encodedReminders) as List;
     List<Reminder> reminders = [];
     for (dynamic decodedReminder in decodedReminders) {
-      // final recurringDays =
-      //     json.decode(decodedReminder["recurringDays"]) as List<bool>?;
       final reminder = Reminder(
-          decodedReminder["id"] as int,
+          decodedReminder["id"],
           ActivityType.values.byName(decodedReminder["activityType"]),
-          // decodedReminder["isRecurring"] as bool,
-          decodedReminder["timestamp"] as int,
-          // recurringDays,
-          decodedReminder["noteId"] as String,
-          decodedReminder["isCompleted"] as bool?);
+          decodedReminder["timestamp"],
+          decodedReminder["noteId"],
+          decodedReminder["isCompleted"]);
       reminders.add(reminder);
     }
-    // decodedReminders.isEmpty ? [] : decodedReminders as List<Reminder>;
+    final encodedChecklist = parsedJson["checklist"];
+    final decodedChecklist = json.decode(encodedChecklist) as List;
+    List<ChecklistItem> checklist = [];
+    for (dynamic decodedChecklistItem in decodedChecklist) {
+      final checklistItem = ChecklistItem(
+          decodedChecklistItem["text"],
+          decodedChecklistItem["isChecked"]);
+      checklist.add(checklistItem);
+    }
     return Checklist(
-      parsedJson["id"],
-      parsedJson["createdAt"],
-      parsedJson["updatedAt"],
-      parsedJson["title"],
-      reminders,
-      ColorOptions.values.byName(parsedJson["color"]),
-      // ActivityType.values.byName(parsedJson["activityType"]),
-      parsedJson["checklist"]
-      ,
-    );
+        parsedJson["id"],
+        parsedJson["createdAt"],
+        parsedJson["updatedAt"],
+        parsedJson["title"],
+        reminders,
+        ColorOptions.values.byName(parsedJson["color"]),
+        checklist);
   }
 
   Map<String, dynamic> toJson() {
     String encodedReminders =
-        jsonEncode(reminders.map((value) => value.toJson()).toList())
-            .toString();
+    jsonEncode(reminders.map((value) => value.toJson()).toList())
+        .toString();
+    String encodedChecklists =
+    jsonEncode(checklist.map((value) => value.toJson()).toList())
+        .toString();
     return {
       "id": id,
       "createdAt": createdAt,
       "updatedAt": updatedAt,
       "title": title,
       "reminders": encodedReminders,
-      // "activityType": activityType.name,
       "color": color.name,
-      "checklist": checklist.toString(),
+      "checklist": encodedChecklists,
     };
   }
-
-
 
   static saveChecklists(List<Checklist> notes) async {
     SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
@@ -99,16 +122,31 @@ class Checklist extends Activity {
     return list;
   }
 
+
+  static Checklist? getChecklist(List<Checklist> checklists, String id) {
+    for (Checklist checklist in checklists) {
+      if (checklist.id == id) {
+        return checklist;
+      }
+    }
+    return null;
+  }
+
   @override
   String getContent() {
-    // TODO: implement getContent
-    throw UnimplementedError();
+    String content = "";
+    return content;
   }
 
   static Checklist copy(Checklist checklist) {
     List<Reminder> remindersCopy = [...checklist.reminders];
-    return Checklist(checklist.id, checklist.updatedAt, checklist.createdAt, checklist.title,
-        remindersCopy, checklist.color, checklist.checklist);
+    return Checklist(
+        checklist.id,
+        checklist.updatedAt,
+        checklist.createdAt,
+        checklist.title,
+        remindersCopy,
+        checklist.color,
+        checklist.checklist);
   }
-
 }
