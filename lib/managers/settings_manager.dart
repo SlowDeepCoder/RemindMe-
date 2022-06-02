@@ -118,6 +118,7 @@ class SettingsManager {
     final loadedCalendarFormat = _sharedPreferences?.getString('calendarFormat');
     final loadedSortOption = _sharedPreferences?.getString('sortOption');
 
+
     _moleName = loadedMoleName ?? "Moley";
     _piggyName = loadedPiggyName ?? "Piggy";
 

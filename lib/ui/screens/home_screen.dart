@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:remind_me/ui/models/note.dart';
 import 'package:remind_me/ui/pages/calendar_page.dart';
@@ -74,20 +73,7 @@ class HomeScreenState extends State<HomeScreen> {
           //   _saveNotes();
           // },
           onActivityClicked: _onActivityClicked,
-          onDeleteActivities: (List<Activity> activities) {
-            for(Activity activity in activities){
-              if(activity.runtimeType == Note){
-                final note  = Note.getNote(_notes, activity.id);
-                _notes.remove(note);
-                _saveNotes();
-              }
-             else  if(activity.runtimeType == Checklist){
-                final checklist  = Checklist.getChecklist(_checklists, activity.id);
-                _checklists.remove(checklist);
-                _saveChecklists();
-              }
-            }
-          },
+          onDeleteActivities: _onDeleteActivities,
         ),
         RemindersPage(
           key: _activitiesPageKey,
@@ -96,7 +82,6 @@ class HomeScreenState extends State<HomeScreen> {
           events: _events,
           reminders: _reminders,
           onReminderClicked: _onActivityClicked,
-          // onRemoveReminder: _removeSavedActivity,
         ),
         CalendarPage(
           key: _calendarPageKey,
@@ -104,7 +89,6 @@ class HomeScreenState extends State<HomeScreen> {
           checklists: _checklists,
           events: _events,
           reminders: _reminders,
-          // onRemoveReminder: _removeSavedActivity,
           onActivityClicked: _onActivityClicked,
           onAddNewEvent: _addNewEvent,
         ),
@@ -154,32 +138,31 @@ class HomeScreenState extends State<HomeScreen> {
       case 0:
         if (_notesPageKey.currentState != null) {
           _appBar = _notesPageKey.currentState!.getAppBar(getStandardAppbar());
-        }
-        else {
+        } else {
           _appBar = getStandardAppbar();
         }
         break;
       case 1:
         if (_activitiesPageKey.currentState != null) {
-          _appBar = _activitiesPageKey.currentState!.getAppBar(getStandardAppbar());
-        }
-        else {
+          _appBar =
+              _activitiesPageKey.currentState!.getAppBar(getStandardAppbar());
+        } else {
           _appBar = getStandardAppbar();
         }
         break;
       case 2:
         if (_calendarPageKey.currentState != null) {
-          _appBar = _calendarPageKey.currentState!.getAppBar(getStandardAppbar());
-        }
-        else {
+          _appBar =
+              _calendarPageKey.currentState!.getAppBar(getStandardAppbar());
+        } else {
           _appBar = getStandardAppbar();
         }
         break;
       case 3:
         if (_statisticsPageKey.currentState != null) {
-          _appBar = _statisticsPageKey.currentState!.getAppBar(getStandardAppbar());
-        }
-        else {
+          _appBar =
+              _statisticsPageKey.currentState!.getAppBar(getStandardAppbar());
+        } else {
           _appBar = getStandardAppbar();
         }
     }
@@ -213,7 +196,7 @@ class HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if(!_renderScreen) return Container();
+    if (!_renderScreen) return Container();
     return WillPopScope(
         onWillPop: _onBackPressed,
         child: Scaffold(
@@ -247,16 +230,16 @@ class HomeScreenState extends State<HomeScreen> {
             ),
             body: BackgroundContainer(
               child: Container(
-                  color:ColorConstants.soil.withOpacity(0.5),
-                  child:  Stack(
-                children: [
-                  buildPageView(),
-                  MoleImage(
-                    key: _moleImageKey,
-                    pages: 4,
-                  )
-                ],
-              )),
+                  color: ColorConstants.soil.withOpacity(0.5),
+                  child: Stack(
+                    children: [
+                      buildPageView(),
+                      MoleImage(
+                        key: _moleImageKey,
+                        pages: 4,
+                      )
+                    ],
+                  )),
             )));
   }
 
@@ -276,16 +259,16 @@ class HomeScreenState extends State<HomeScreen> {
   }
 
   _loadReminders() async {
-    List<Reminder> reminders = Reminder.getReminders([_notes, _events, _checklists]);
+    List<Reminder> reminders =
+        Reminder.getReminders([_notes, _events, _checklists]);
     _reminders.clear();
     setState(() {
       _reminders.addAll(reminders);
     });
   }
 
-
   _onActivityClicked(Activity activity) {
-    switch(activity.runtimeType){
+    switch (activity.runtimeType) {
       case Note:
         _openNote(activity as Note);
         break;
@@ -297,7 +280,6 @@ class HomeScreenState extends State<HomeScreen> {
         break;
     }
   }
-
 
   _addNewNote() async {
     _notesPageKey.currentState?.clearSelectedNotes();
@@ -329,24 +311,23 @@ class HomeScreenState extends State<HomeScreen> {
     }
   }
 
-
   _addNewChecklist() async {
     _notesPageKey.currentState?.clearSelectedNotes();
     final checklist =
-    await Navigator.pushNamed(context, EditChecklistScreen.routeName) as Checklist?;
+        await Navigator.pushNamed(context, EditChecklistScreen.routeName)
+            as Checklist?;
 
     if (checklist != null) {
       _checklists.add(checklist);
       _saveChecklists();
-
     }
   }
 
   _openChecklist(Checklist checklist) async {
     Navigator.of(context).popUntil(ModalRoute.withName(HomeScreen.routeName));
     final editedChecklist = await Navigator.pushNamed(
-        context, EditChecklistScreen.routeName,
-        arguments: checklist) as Checklist?;
+            context, EditChecklistScreen.routeName, arguments: checklist)
+        as Checklist?;
 
     if (editedChecklist != null) {
       for (int i = 0; i < _checklists.length; i++) {
@@ -361,24 +342,20 @@ class HomeScreenState extends State<HomeScreen> {
     }
   }
 
-
   _addNewEvent(DateTime? date) async {
     final event =
-    await EditEventBottomSheet.showBottomSheet(context, null, date, null);
+        await EditEventBottomSheet.showBottomSheet(context, null, date, null);
 
     if (event != null) {
       _events.add(event);
       _saveEvents();
     }
-
   }
 
   _openEvent(Event event) async {
     Navigator.of(context).popUntil(ModalRoute.withName(HomeScreen.routeName));
-    Event? editedEvent =
-    await EditEventBottomSheet.showBottomSheet(context, event, null, () => _onDeleteEvent(event));
-
-
+    Event? editedEvent = await EditEventBottomSheet.showBottomSheet(
+        context, event, null, () => _onDeleteEvent(event));
 
     if (editedEvent != null) {
       for (int i = 0; i < _events.length; i++) {
@@ -432,6 +409,7 @@ class HomeScreenState extends State<HomeScreen> {
 
   _onDeleteEvent(Event event) {
     print("hej");
+    event.removeAllReminders();
     _events.remove(event);
     _saveEvents();
   }
@@ -440,5 +418,29 @@ class HomeScreenState extends State<HomeScreen> {
     setState(() {
       print("hej");
     });
+  }
+
+
+  static Future functionName(Map<String, String> params, {bool isDone = false}) async {
+  }
+
+  _onDeleteActivities(List<Activity> activities) async {
+    for (Activity activity in activities) {
+      if (activity.runtimeType == Note) {
+        final note = Note.getNote(_notes, activity.id);
+        if (note != null) {
+          await note.removeAllReminders();
+          _notes.remove(note);
+          _saveNotes();
+        }
+      } else if (activity.runtimeType == Checklist) {
+        final checklist = Checklist.getChecklist(_checklists, activity.id);
+        if (checklist != null) {
+          await checklist.removeAllReminders();
+          _checklists.remove(checklist);
+          _saveChecklists();
+        }
+      }
+    }
   }
 }

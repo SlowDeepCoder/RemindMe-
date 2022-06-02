@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
@@ -37,6 +39,8 @@ class _EditChecklistScreenState extends State<EditChecklistScreen> {
   @override
   void initState() {
     super.initState();
+
+    Random().nextBool();
     _isNewNote = widget.checklist == null;
     if (widget.checklist != null) {
       checklist = Checklist.copy(widget.checklist!);

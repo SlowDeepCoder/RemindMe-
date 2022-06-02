@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
+import 'package:remind_me/managers/notification_manager.dart';
 import 'package:remind_me/ui/models/note.dart';
 import 'package:remind_me/ui/screens/edit_activity_base_scaffold.dart';
 
@@ -39,7 +40,17 @@ abstract class Activity {
     reminders.add(reminder);
   }
 
-  removeReminder(Reminder reminder) {
+
+
+  removeAllReminders() async{
+    for(Reminder reminder in reminders){
+      await NotificationManager.cancelReminder(reminder);
+      reminders.remove(reminder);
+    }
+  }
+
+  removeReminder(Reminder reminder) async{
+    await NotificationManager.cancelReminder(reminder);
     reminders.remove(reminder);
   }
 

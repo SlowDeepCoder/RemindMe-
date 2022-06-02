@@ -89,9 +89,9 @@ class _BottomSheetState extends State<BottomSheet> {
       event = Event.create();
       if (widget.timestamp != null) {
         if (event.reminders.isEmpty) {
-          final newReinder =
+          final newReminder =
               Reminder.create(event.id, ActivityType.event, widget.timestamp!);
-          event.addReminder(newReinder);
+          event.addReminder(newReminder);
         }
       }
     }
@@ -278,9 +278,9 @@ class _BottomSheetState extends State<BottomSheet> {
             pickedDate.day, pickedTime.hour, pickedTime.minute);
         setState(() {
           if (reminder == null) {
-            final newReinder = Reminder.create(event.id, ActivityType.event,
+            final newReminder = Reminder.create(event.id, ActivityType.event,
                 pickedDateTime.millisecondsSinceEpoch);
-            event.addReminder(newReinder);
+            event.addReminder(newReminder);
           } else {
             reminder.timestamp = pickedDateTime.millisecondsSinceEpoch;
           }
